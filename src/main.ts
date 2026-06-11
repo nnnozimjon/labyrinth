@@ -2,10 +2,10 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import RAPIER from "@dimforge/rapier3d-compat";
 import ballModelUrl from "./ball.glb?url";
-import boardModelUrl from "./board-ground-level-2.glb?url";
+import boardModelUrl from "./board-ground.glb?url";
 import wallsModelUrl from "./board-walls.glb?url";
 import gateModelUrl from "./board-gate.glb?url";
-import puzzleModelUrl from "./puzzle-2.glb?url";
+import puzzleModelUrl from "./puzzles.glb?url";
 import stairsModelUrl from "./board-stairs.glb?url";
 import groundModelUrl from "./ground.glb?url";
 import bookModelUrl from "./book.glb?url";
@@ -105,10 +105,16 @@ const DEBUG_SSS_UI = true;
 /** When true, shows a lil-gui panel to position and tune the downward bulb light. */
 const DEBUG_BULB_LIGHT = true;
 
+/** How many units above the final position the puzzles start for the intro animation. */
+const PUZZLE_INTRO_START_Y = -30;
+
+/** Duration in seconds for the puzzle drop-in animation. */
+const PUZZLE_INTRO_DURATION = 2;
+
 /** Manual placement for each puzzle obstacle (board-local coordinates). */
 const PUZZLE_PLACEMENTS = [
   {
-    position: { x: 0, z: 0, y: 0 },
+    position: { x: 0, z: 0, y: 0 }, // final resting y position
   },
 ];
 
@@ -329,7 +335,6 @@ async function main() {
   controls.target.set(0.15, 0.44, -0.913);
   controls.update();
 
-
   await PhysicsStaticEnvironment.create(
     RAPIER,
     world,
@@ -361,6 +366,17 @@ async function main() {
     textureUrl: "/textures/fabric-2.png",
     excludeColliderObjectNames: [FAN_OBJECT_NAME],
   });
+
+  // --- Puzzle intro drop animation setup ---
+  // Save each visual's final Y, then offset them upward to start high
+  puzzle.visuals.forEach((v) => {
+    v.userData.finalY = v.position.y;
+    v.position.y += PUZZLE_INTRO_START_Y;
+  });
+
+  let puzzleIntroTime = 0;
+  let puzzleIntroActive = true;
+  // ---------------------------------------
 
   const puzzleFans = puzzle.visuals
     .map((visual) =>
@@ -395,7 +411,7 @@ async function main() {
   });
 
   // enable shadows on static world group and tilting board group
-  enableShadowsOnObject(staticWorldGroup);  
+  enableShadowsOnObject(staticWorldGroup);
   // enableShadowsOnObject(tiltingBoardGroup);
   // enableShadowsOnObject(ball.visual);
 
@@ -436,6 +452,26 @@ async function main() {
     boardQuaternion.setFromEuler(boardEuler);
     board.setRotation(boardQuaternion);
     puzzleFans.forEach((fan) => fan.update(delta));
+
+    // --- Puzzle intro drop animation ---
+    if (puzzleIntroActive) {
+      puzzleIntroTime += delta;
+      const t = Math.min(puzzleIntroTime / PUZZLE_INTRO_DURATION, 1);
+      // Ease out cubic: fast drop, gentle landing
+      const eased = 1 - Math.pow(1 - t, 3);
+      const offsetY = PUZZLE_INTRO_START_Y * (1 - eased);
+      puzzle.visuals.forEach((v) => {
+        v.position.y = v.userData.finalY + offsetY;
+      });
+      if (t >= 1) {
+        // Snap exactly to final position and stop animating
+        puzzle.visuals.forEach((v) => {
+          v.position.y = v.userData.finalY;
+        });
+        puzzleIntroActive = false;
+      }
+    }
+    // ------------------------------------
 
     world.timestep = delta;
     world.step();
