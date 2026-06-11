@@ -2,10 +2,10 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import RAPIER from "@dimforge/rapier3d-compat";
 import ballModelUrl from "./ball.glb?url";
-import boardModelUrl from "./board-ground.glb?url";
+import boardModelUrl from "./board-ground-level-2.glb?url";
 import wallsModelUrl from "./board-walls.glb?url";
 import gateModelUrl from "./board-gate.glb?url";
-import puzzleModelUrl from "./puzzles.glb?url";
+import puzzleModelUrl from "./puzzle-2.glb?url";
 import stairsModelUrl from "./board-stairs.glb?url";
 import groundModelUrl from "./ground.glb?url";
 import bookModelUrl from "./book.glb?url";
@@ -16,6 +16,7 @@ import levelCalendarModelUrl from "./level-calendar.glb?url";
 import boxModelUrl from "./box.glb?url";
 import sandWatchModelUrl from "./sand-watch.glb?url";
 import dicesModelUrl from "./dices.glb?url";
+import vfxHolesModelUrl from './level2-holes-vfx.glb?url';
 import { PhysicsBall } from "./PhysicsBall";
 import { PhysicsBoard } from "./PhysicsBoard";
 import { PhysicsGate } from "./PhysicsGate";
@@ -253,6 +254,22 @@ async function main() {
       color: 0xffffff,
       roughness: 0.9,
       metalness: 0.1,
+    },
+    board
+  );
+
+
+  await PhysicsStaticEnvironment.create(
+    RAPIER,
+    world,
+    staticWorldGroup,
+    vfxHolesModelUrl,
+    {
+      scale: BOARD_SCALE,
+      alignWithBoard: true,
+      position: { x: 0, z: 0, y: 0 },
+      enableColliders: false,
+      maxAnisotropy: renderer.capabilities.getMaxAnisotropy(),
     },
     board
   );
