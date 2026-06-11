@@ -17,6 +17,7 @@ import boxModelUrl from "./box.glb?url";
 import sandWatchModelUrl from "./sand-watch.glb?url";
 import dicesModelUrl from "./dices.glb?url";
 import vfxHolesModelUrl from './level2-holes-vfx.glb?url';
+import vfxGateHoleModelUrl from './gate-hole-vfx.glb?url';
 import { PhysicsBall } from "./PhysicsBall";
 import { PhysicsBoard } from "./PhysicsBoard";
 import { PhysicsGate } from "./PhysicsGate";
@@ -232,6 +233,19 @@ async function main() {
   const lampPosition = new THREE.Vector3();
   lamp.visual.getWorldPosition(lampPosition);
   aimLampAt(sceneLights, lampPosition, boardFocus);
+
+  await PhysicsStaticEnvironment.create(
+    RAPIER,
+    world,
+    staticWorldGroup,
+    vfxGateHoleModelUrl,
+    {
+      scale: BOARD_SCALE,
+      alignWithBoard: true,
+      position: { x: 0, y: 0, z: 0 },
+    },
+    board
+  );
 
   await PhysicsStaticEnvironment.create(
     RAPIER,
