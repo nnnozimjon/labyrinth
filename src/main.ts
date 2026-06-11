@@ -25,6 +25,7 @@ import { PhysicsHoles } from "./PhysicsHoles";
 import { PhysicsPuzzle } from "./PhysicsPuzzle";
 import { FAN_OBJECT_NAME, PuzzleFanRotation } from "./PuzzleFanRotation";
 import { PhysicsStaticEnvironment } from "./PhysicsStaticEnvironment";
+import { PhysicsGateHole } from "./PhysicsGateHole";
 import { PhysicsStairs } from "./PhysicsStairs";
 import { PhysicsWalls } from "./PhysicsWalls";
 import { PhysicsDebugRenderer } from "./PhysicsDebug";
@@ -94,7 +95,7 @@ const GROUND_SCALE = 10;
 const BALL_COLLIDER_RADIUS: number | undefined = 0.5;
 
 /** When true, renders wireframe debug visuals for all physics colliders. */
-const SHOW_COLLIDERS = false;
+const SHOW_COLLIDERS = true;
 
 /** When true, shows helpers for scene lights (position and direction). */
 const SHOW_LIGHT_HELPERS = false;
@@ -120,6 +121,77 @@ const PUZZLE_PLACEMENTS = [
     position: { x: 0, z: 0, y: 0 }, // final resting y position
   },
 ];
+
+function createWinOverlay() {
+  const style = document.createElement("style");
+  style.textContent = `
+    @keyframes win-card-glow {
+      0%, 100% { box-shadow: 0 0 30px rgba(0,255,68,0.4), 0 0 60px rgba(0,255,68,0.15); }
+      50%       { box-shadow: 0 0 55px rgba(0,255,68,0.7), 0 0 110px rgba(0,255,68,0.35); }
+    }
+    @keyframes win-title-glow {
+      0%, 100% { text-shadow: 0 0 18px rgba(0,255,68,0.8); }
+      50%       { text-shadow: 0 0 36px rgba(0,255,68,1), 0 0 70px rgba(0,255,68,0.5); }
+    }
+    #win-next-btn:hover { background: #00cc33 !important; transform: scale(1.06); }
+  `;
+  document.head.appendChild(style);
+
+  const overlay = document.createElement("div");
+  Object.assign(overlay.style, {
+    position: "fixed", inset: "0",
+    background: "rgba(0,0,0,0.78)",
+    display: "none", alignItems: "center", justifyContent: "center",
+    zIndex: "1000",
+  });
+
+  const card = document.createElement("div");
+  Object.assign(card.style, {
+    background: "rgba(8,22,12,0.97)",
+    border: "2px solid #00ff44",
+    borderRadius: "20px",
+    padding: "52px 72px",
+    textAlign: "center",
+    animation: "win-card-glow 2s ease-in-out infinite",
+  });
+
+  const title = document.createElement("h1");
+  title.textContent = "You Win!";
+  Object.assign(title.style, {
+    color: "#00ff44", fontSize: "3.6rem",
+    margin: "0 0 8px", fontFamily: "sans-serif", fontWeight: "bold",
+    animation: "win-title-glow 2s ease-in-out infinite",
+  });
+
+  const sub = document.createElement("p");
+  sub.textContent = "Level Complete";
+  Object.assign(sub.style, {
+    color: "rgba(0,255,68,0.65)", fontSize: "1.1rem",
+    margin: "0 0 34px", fontFamily: "sans-serif",
+  });
+
+  const btn = document.createElement("button");
+  btn.id = "win-next-btn";
+  btn.textContent = "Next Level";
+  Object.assign(btn.style, {
+    background: "#00ff44", color: "#061008",
+    border: "none", borderRadius: "10px",
+    padding: "16px 44px", fontSize: "1.2rem", fontWeight: "bold",
+    cursor: "pointer", fontFamily: "sans-serif",
+    transition: "background 0.18s, transform 0.18s",
+    display: "block", margin: "0 auto",
+  });
+
+  card.append(title, sub, btn);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+
+  return {
+    show: () => { overlay.style.display = "flex"; },
+    hide: () => { overlay.style.display = "none"; },
+    onNextLevel: (cb: () => void) => { btn.addEventListener("click", cb); },
+  };
+}
 
 async function main() {
   await RAPIER.init();
@@ -234,18 +306,7 @@ async function main() {
   lamp.visual.getWorldPosition(lampPosition);
   aimLampAt(sceneLights, lampPosition, boardFocus);
 
-  await PhysicsStaticEnvironment.create(
-    RAPIER,
-    world,
-    staticWorldGroup,
-    vfxGateHoleModelUrl,
-    {
-      scale: BOARD_SCALE,
-      alignWithBoard: true,
-      position: { x: 0, y: 0, z: 0 },
-    },
-    board
-  );
+  const gateHole = await PhysicsGateHole.create(board, vfxGateHoleModelUrl);
 
   await PhysicsStaticEnvironment.create(
     RAPIER,
@@ -428,6 +489,22 @@ async function main() {
     startPosition: new THREE.Vector3(0, 0.3, 2.8),
   });
 
+  let ballFrozen = false;
+
+  const winOverlay = createWinOverlay();
+  gateHole.onWin(() => {
+    ballFrozen = true;
+    ball.visual.visible = false;
+    winOverlay.show();
+  });
+  winOverlay.onNextLevel(() => {
+    winOverlay.hide();
+    gateHole.reset();
+    ball.reset();
+    ball.visual.visible = true;
+    ballFrozen = false;
+  });
+
   // enable shadows on static world group and tilting board group
   enableShadowsOnObject(staticWorldGroup);
   // enableShadowsOnObject(tiltingBoardGroup);
@@ -497,8 +574,11 @@ async function main() {
     physicsDebug?.update();
     lightDebug?.update();
     holes.update(delta);
+    gateHole.update(delta, ball);
 
-    ball.syncFromPhysics();
+    if (!ballFrozen) {
+      ball.syncFromPhysics();
+    }
 
     controls.update();
     cameraDebug?.update();
