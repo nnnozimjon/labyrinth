@@ -362,7 +362,7 @@ async function main() {
     scale: BOARD_SCALE,
   });
 
-  const holes = await PhysicsHoles.create(RAPIER, world, board, vfxHolesModelUrl);
+  const holes = await PhysicsHoles.create(board, vfxHolesModelUrl);
 
   const puzzle = await PhysicsPuzzle.create(RAPIER, world, board, puzzleModelUrl, {
     scale: BOARD_SCALE,
@@ -484,10 +484,6 @@ async function main() {
     lightDebug?.update();
     holes.update(delta);
 
-    const ballCollider = ball.body.collider(0);
-    if (holes.isTouching(world, ballCollider)) {
-      ball.reset();
-    }
     ball.syncFromPhysics();
 
     controls.update();

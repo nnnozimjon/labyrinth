@@ -1,10 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import type RAPIER from "@dimforge/rapier3d-compat";
 import type { PhysicsBoard } from "./PhysicsBoard";
-import { getBounds, prepareGltfMaterials } from "./physicsUtils";
-
-type RapierModule = typeof RAPIER;
+import { prepareGltfMaterials } from "./physicsUtils";
 
 const loader = new GLTFLoader();
 
@@ -19,18 +16,14 @@ const HOLE_MATERIAL = new THREE.MeshStandardMaterial({
 });
 
 export class PhysicsHoles {
-  private readonly sensorColliders: RAPIER.Collider[];
   private readonly meshes: THREE.Mesh[];
   private time = 0;
 
-  private constructor(sensorColliders: RAPIER.Collider[], meshes: THREE.Mesh[]) {
-    this.sensorColliders = sensorColliders;
+  private constructor(meshes: THREE.Mesh[]) {
     this.meshes = meshes;
   }
 
   static async create(
-    RAPIER: RapierModule,
-    world: RAPIER.World,
     board: PhysicsBoard,
     modelUrl: string
   ): Promise<PhysicsHoles> {
@@ -48,38 +41,14 @@ export class PhysicsHoles {
     board.visual.add(model);
 
     const meshes: THREE.Mesh[] = [];
-    const sensorColliders: RAPIER.Collider[] = [];
 
     model.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
-
       child.material = HOLE_MATERIAL.clone();
       meshes.push(child);
-
-      child.updateMatrixWorld(true);
-      const bounds = getBounds(child);
-      const c = bounds.center;
-      const s = bounds.size;
-
-      // Sensor slightly taller than the mesh so the ball triggers before falling through
-      const collider = world.createCollider(
-        RAPIER.ColliderDesc.cuboid(s.x / 2, Math.max(s.y / 2, 0.3), s.z / 2)
-          .setTranslation(c.x, c.y, c.z)
-          .setSensor(true),
-        board.body
-      );
-      sensorColliders.push(collider);
     });
 
-    return new PhysicsHoles(sensorColliders, meshes);
-  }
-
-  /** Returns true if the ball collider is inside any hole sensor this frame. */
-  isTouching(world: RAPIER.World, ballCollider: RAPIER.Collider): boolean {
-    for (const sensor of this.sensorColliders) {
-      if (world.intersectionPair(sensor, ballCollider)) return true;
-    }
-    return false;
+    return new PhysicsHoles(meshes);
   }
 
   /** Animate the pulsing red glow. Call every frame with the frame delta. */
