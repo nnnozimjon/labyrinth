@@ -582,6 +582,7 @@ async function main() {
 
   const winOverlay = createWinOverlay();
   gateHole.onWin(() => {
+    if (ballFrozen || lossPending) return;
     ballFrozen = true;
     ball.visual.visible = false;
     winOverlay.show();
@@ -662,10 +663,12 @@ async function main() {
 
     physicsDebug?.update();
     lightDebug?.update();
-    holes.update(delta, ball);
+    if (!ballFrozen) {
+      holes.update(delta, ball);
+    }
     gateHole.update(delta, ball);
 
-    if (lossPending) {
+    if (lossPending && !ballFrozen) {
       lossTimer += delta;
       if (lossTimer >= 2) {
         lossPending = false;
