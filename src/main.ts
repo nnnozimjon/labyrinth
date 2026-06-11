@@ -125,7 +125,7 @@ async function main() {
 
   const joystick = new VirtualJoystick();
 
-  const gravity = new RAPIER.Vector3(0, -9.81, 0);
+  const gravity = new RAPIER.Vector3(0, -24.81, 0);
   const world = new RAPIER.World(gravity);
 
   const staticWorldGroup = new THREE.Group();
@@ -422,7 +422,7 @@ async function main() {
   const physicsDebug = SHOW_COLLIDERS
     ? new PhysicsDebugRenderer(world, scene)
     : null;
-
+  
   const lightDebug = SHOW_LIGHT_HELPERS ? new LightDebugRenderer(scene) : null;
 
   const cameraDebug = DEBUG_CAMERA_TRANSFORM
