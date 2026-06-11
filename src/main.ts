@@ -407,7 +407,7 @@ async function main() {
 
   const ball = await PhysicsBall.create(RAPIER, world, scene, ballModelUrl, {
     colliderRadius: BALL_COLLIDER_RADIUS,
-    startY: board.surfaceY + (BALL_COLLIDER_RADIUS ?? 0.5) + 1.5,
+    startPosition: new THREE.Vector3(0, 0.2, 2.8),
   });
 
   // enable shadows on static world group and tilting board group

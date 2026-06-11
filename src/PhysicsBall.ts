@@ -2,11 +2,12 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type RAPIER from "@dimforge/rapier3d-compat";
 import { prepareGltfMaterials } from "./physicsUtils";
+
 export type PhysicsBallOptions = {
   /** Override the auto-calculated sphere collider radius. */
   colliderRadius?: number;
   restitution?: number;
-  startY?: number;
+  startPosition?: THREE.Vector3;
 };
 
 type RapierModule = typeof RAPIER;
@@ -37,15 +38,18 @@ export class PhysicsBall {
   readonly visual: THREE.Group;
   readonly body: RAPIER.RigidBody;
   readonly colliderRadius: number;
+  private readonly startPosition: THREE.Vector3;
 
   private constructor(
     visual: THREE.Group,
     body: RAPIER.RigidBody,
-    colliderRadius: number
+    colliderRadius: number,
+    startPosition: THREE.Vector3
   ) {
     this.visual = visual;
     this.body = body;
     this.colliderRadius = colliderRadius;
+    this.startPosition = startPosition.clone();
   }
 
   static async create(
@@ -69,8 +73,9 @@ export class PhysicsBall {
     const visual = new THREE.Group();
     visual.add(model);
 
-    const startY = options.startY ?? 3;
-    const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(0, startY, 0);
+    const startPosition = options.startPosition ?? new THREE.Vector3(0, 0, 0);
+    const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+      .setTranslation(startPosition.x, startPosition.y, startPosition.z);
     const body = world.createRigidBody(bodyDesc);
 
     world.createCollider(
@@ -78,16 +83,31 @@ export class PhysicsBall {
       body
     );
 
-    visual.position.y = startY;
+    visual.position.copy(startPosition);
     scene.add(visual);
 
-    return new PhysicsBall(visual, body, 0.3);
+    return new PhysicsBall(visual, body, 0.3, startPosition);
   }
 
-  syncFromPhysics() {
-    const position = this.body.translation();
-    const rotation = this.body.rotation();
+  reset() {
+    this.body.setTranslation(
+      { x: this.startPosition.x, y: this.startPosition.y, z: this.startPosition.z },
+      true
+    );
+    this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    this.body.wakeUp();
+  }
 
+  syncFromPhysics(fallThreshold = -5) {
+    const position = this.body.translation();
+
+    if (position.y < fallThreshold) {
+      this.reset();
+      return;
+    }
+
+    const rotation = this.body.rotation();
     this.visual.position.set(position.x, position.y, position.z);
     this.visual.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
   }
