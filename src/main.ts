@@ -574,6 +574,8 @@ async function main() {
   lossOverlay.onRetry(() => {
     lossOverlay.hide();
     holes.reset();
+    lossPending = false;
+    lossTimer = 0;
     ball.autoResetEnabled = true;
     ball.reset();
     ball.visual.visible = true;
@@ -582,7 +584,9 @@ async function main() {
 
   const winOverlay = createWinOverlay();
   gateHole.onWin(() => {
-    if (ballFrozen || lossPending) return;
+    if (ballFrozen) return;
+    lossPending = false;
+    lossTimer = 0;
     ballFrozen = true;
     ball.visual.visible = false;
     winOverlay.show();
@@ -590,6 +594,8 @@ async function main() {
   winOverlay.onNextLevel(() => {
     winOverlay.hide();
     gateHole.reset();
+    holes.reset();
+    ball.autoResetEnabled = true;
     ball.reset();
     ball.visual.visible = true;
     ballFrozen = false;
@@ -663,14 +669,14 @@ async function main() {
 
     physicsDebug?.update();
     lightDebug?.update();
-    if (!ballFrozen) {
+    gateHole.update(delta, ball);
+    if (!ballFrozen && !gateHole.isNear) {
       holes.update(delta, ball);
     }
-    gateHole.update(delta, ball);
 
     if (lossPending && !ballFrozen) {
       lossTimer += delta;
-      if (lossTimer >= 2) {
+      if (lossTimer >= 1) {
         lossPending = false;
         ballFrozen = true;
         ball.visual.visible = false;

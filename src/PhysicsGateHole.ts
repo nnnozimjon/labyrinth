@@ -53,6 +53,10 @@ export class PhysicsGateHole {
     return new PhysicsGateHole(meshes);
   }
 
+  get isNear(): boolean {
+    return this.overTimer > 0 || this.triggered;
+  }
+
   onWin(callback: () => void) {
     this.onWinCallback = callback;
   }
