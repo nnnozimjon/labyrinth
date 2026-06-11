@@ -6,9 +6,12 @@ import { prepareGltfMaterials } from "./physicsUtils";
 
 const loader = new GLTFLoader();
 
-const WIN_DELAY = 2.0;
+// Short delay: ball must be in the hole zone for this many seconds before win fires.
+// Must be shorter than the time to fall 2+ units (~0.43 s at g=24.81).
+const WIN_DELAY = 0.35;
 const DETECTION_RADIUS = 1.5;
-const DETECTION_HEIGHT = 2.0;
+// Ball must have dipped below normal rolling height (~0.3) to confirm it entered the hole.
+const HOLE_ENTRY_OFFSET = 0.15;
 
 export class PhysicsGateHole {
   private readonly meshes: THREE.Mesh[] = [];
@@ -91,9 +94,11 @@ export class PhysicsGateHole {
     const t = ball.body.translation();
     const dx = t.x - holeCenter.x;
     const dz = t.z - holeCenter.z;
+    // No lower-bound Y clamp: once ball starts falling into the hole it stays detected
+    // even as it drops far below — the XZ check is the meaningful gatekeeper.
     const isNear =
       Math.sqrt(dx * dx + dz * dz) < DETECTION_RADIUS &&
-      Math.abs(t.y - holeCenter.y) < DETECTION_HEIGHT;
+      t.y < holeCenter.y + HOLE_ENTRY_OFFSET;
 
     if (isNear) {
       this.overTimer += delta;

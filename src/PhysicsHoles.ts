@@ -6,8 +6,10 @@ import { prepareGltfMaterials } from "./physicsUtils";
 
 const loader = new GLTFLoader();
 
-const DETECTION_RADIUS = 1.0;
-const DETECTION_HEIGHT = 2.0;
+// Tight XZ radius so detection only fires when ball is directly over the hole
+const DETECTION_RADIUS = 0.7;
+// Ball must have started falling into the hole (below normal rolling height of ~0.3)
+const HOLE_ENTRY_OFFSET = 0.15;
 
 const HOLE_MATERIAL = new THREE.MeshStandardMaterial({
   color: 0xff1100,
@@ -88,7 +90,7 @@ export class PhysicsHoles {
 
       if (
         Math.sqrt(dx * dx + dz * dz) < DETECTION_RADIUS &&
-        Math.abs(t.y - holeCenter.y) < DETECTION_HEIGHT
+        t.y < holeCenter.y + HOLE_ENTRY_OFFSET
       ) {
         this.triggered = true;
         this.onLossCallback?.();
