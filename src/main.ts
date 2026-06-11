@@ -20,6 +20,7 @@ import vfxHolesModelUrl from './level2-holes-vfx.glb?url';
 import { PhysicsBall } from "./PhysicsBall";
 import { PhysicsBoard } from "./PhysicsBoard";
 import { PhysicsGate } from "./PhysicsGate";
+import { PhysicsHoles } from "./PhysicsHoles";
 import { PhysicsPuzzle } from "./PhysicsPuzzle";
 import { FAN_OBJECT_NAME, PuzzleFanRotation } from "./PuzzleFanRotation";
 import { PhysicsStaticEnvironment } from "./PhysicsStaticEnvironment";
@@ -258,22 +259,6 @@ async function main() {
     board
   );
 
-
-  await PhysicsStaticEnvironment.create(
-    RAPIER,
-    world,
-    staticWorldGroup,
-    vfxHolesModelUrl,
-    {
-      scale: BOARD_SCALE,
-      alignWithBoard: true,
-      position: { x: 0, z: 0, y: 0 },
-      enableColliders: false,
-      maxAnisotropy: renderer.capabilities.getMaxAnisotropy(),
-    },
-    board
-  );
-
   await PhysicsStaticEnvironment.create(
     RAPIER,
     world,
@@ -377,6 +362,8 @@ async function main() {
     scale: BOARD_SCALE,
   });
 
+  const holes = await PhysicsHoles.create(RAPIER, world, board, vfxHolesModelUrl);
+
   const puzzle = await PhysicsPuzzle.create(RAPIER, world, board, puzzleModelUrl, {
     scale: BOARD_SCALE,
     placements: PUZZLE_PLACEMENTS,
@@ -424,7 +411,7 @@ async function main() {
 
   const ball = await PhysicsBall.create(RAPIER, world, scene, ballModelUrl, {
     colliderRadius: BALL_COLLIDER_RADIUS,
-    startPosition: new THREE.Vector3(0, 0.2, 2.8),
+    startPosition: new THREE.Vector3(0, 0.3, 2.8),
   });
 
   // enable shadows on static world group and tilting board group
@@ -495,6 +482,12 @@ async function main() {
 
     physicsDebug?.update();
     lightDebug?.update();
+    holes.update(delta);
+
+    const ballCollider = ball.body.collider(0);
+    if (holes.isTouching(world, ballCollider)) {
+      ball.reset();
+    }
     ball.syncFromPhysics();
 
     controls.update();
