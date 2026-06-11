@@ -40,6 +40,8 @@ export class PhysicsBall {
   readonly colliderRadius: number;
   private readonly startPosition: THREE.Vector3;
 
+  autoResetEnabled = true;
+
   private constructor(
     visual: THREE.Group,
     body: RAPIER.RigidBody,
@@ -103,7 +105,7 @@ export class PhysicsBall {
     const position = this.body.translation();
 
     if (position.y < fallThreshold) {
-      this.reset();
+      if (this.autoResetEnabled) this.reset();
       return;
     }
 

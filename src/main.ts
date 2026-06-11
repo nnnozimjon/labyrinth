@@ -122,6 +122,77 @@ const PUZZLE_PLACEMENTS = [
   },
 ];
 
+function createLossOverlay() {
+  const style = document.createElement("style");
+  style.textContent = `
+    @keyframes loss-card-glow {
+      0%, 100% { box-shadow: 0 0 30px rgba(255,60,0,0.4), 0 0 60px rgba(255,60,0,0.15); }
+      50%       { box-shadow: 0 0 55px rgba(255,60,0,0.7), 0 0 110px rgba(255,60,0,0.35); }
+    }
+    @keyframes loss-title-glow {
+      0%, 100% { text-shadow: 0 0 18px rgba(255,60,0,0.8); }
+      50%       { text-shadow: 0 0 36px rgba(255,60,0,1), 0 0 70px rgba(255,60,0,0.5); }
+    }
+    #loss-retry-btn:hover { background: #cc2200 !important; transform: scale(1.06); }
+  `;
+  document.head.appendChild(style);
+
+  const overlay = document.createElement("div");
+  Object.assign(overlay.style, {
+    position: "fixed", inset: "0",
+    background: "rgba(0,0,0,0.78)",
+    display: "none", alignItems: "center", justifyContent: "center",
+    zIndex: "1000",
+  });
+
+  const card = document.createElement("div");
+  Object.assign(card.style, {
+    background: "rgba(22,8,8,0.97)",
+    border: "2px solid #ff3c00",
+    borderRadius: "20px",
+    padding: "52px 72px",
+    textAlign: "center",
+    animation: "loss-card-glow 2s ease-in-out infinite",
+  });
+
+  const title = document.createElement("h1");
+  title.textContent = "You kinda lost...";
+  Object.assign(title.style, {
+    color: "#ff3c00", fontSize: "3rem",
+    margin: "0 0 8px", fontFamily: "sans-serif", fontWeight: "bold",
+    animation: "loss-title-glow 2s ease-in-out infinite",
+  });
+
+  const sub = document.createElement("p");
+  sub.textContent = "The ball fell in a hole. Better luck next time!";
+  Object.assign(sub.style, {
+    color: "rgba(255,60,0,0.65)", fontSize: "1.1rem",
+    margin: "0 0 34px", fontFamily: "sans-serif",
+  });
+
+  const btn = document.createElement("button");
+  btn.id = "loss-retry-btn";
+  btn.textContent = "Try Again";
+  Object.assign(btn.style, {
+    background: "#ff3c00", color: "#160808",
+    border: "none", borderRadius: "10px",
+    padding: "16px 44px", fontSize: "1.2rem", fontWeight: "bold",
+    cursor: "pointer", fontFamily: "sans-serif",
+    transition: "background 0.18s, transform 0.18s",
+    display: "block", margin: "0 auto",
+  });
+
+  card.append(title, sub, btn);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+
+  return {
+    show: () => { overlay.style.display = "flex"; },
+    hide: () => { overlay.style.display = "none"; },
+    onRetry: (cb: () => void) => { btn.addEventListener("click", cb); },
+  };
+}
+
 function createWinOverlay() {
   const style = document.createElement("style");
   style.textContent = `
@@ -490,6 +561,24 @@ async function main() {
   });
 
   let ballFrozen = false;
+  let lossTimer = 0;
+  let lossPending = false;
+
+  const lossOverlay = createLossOverlay();
+  holes.onLoss(() => {
+    if (lossPending || ballFrozen) return;
+    lossPending = true;
+    lossTimer = 0;
+    ball.autoResetEnabled = false;
+  });
+  lossOverlay.onRetry(() => {
+    lossOverlay.hide();
+    holes.reset();
+    ball.autoResetEnabled = true;
+    ball.reset();
+    ball.visual.visible = true;
+    ballFrozen = false;
+  });
 
   const winOverlay = createWinOverlay();
   gateHole.onWin(() => {
@@ -573,8 +662,18 @@ async function main() {
 
     physicsDebug?.update();
     lightDebug?.update();
-    holes.update(delta);
+    holes.update(delta, ball);
     gateHole.update(delta, ball);
+
+    if (lossPending) {
+      lossTimer += delta;
+      if (lossTimer >= 2) {
+        lossPending = false;
+        ballFrozen = true;
+        ball.visual.visible = false;
+        lossOverlay.show();
+      }
+    }
 
     if (!ballFrozen) {
       ball.syncFromPhysics();

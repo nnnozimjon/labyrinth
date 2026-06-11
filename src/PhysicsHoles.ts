@@ -1,9 +1,13 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { PhysicsBoard } from "./PhysicsBoard";
+import type { PhysicsBall } from "./PhysicsBall";
 import { prepareGltfMaterials } from "./physicsUtils";
 
 const loader = new GLTFLoader();
+
+const DETECTION_RADIUS = 1.0;
+const DETECTION_HEIGHT = 2.0;
 
 const HOLE_MATERIAL = new THREE.MeshStandardMaterial({
   color: 0xff1100,
@@ -18,6 +22,8 @@ const HOLE_MATERIAL = new THREE.MeshStandardMaterial({
 export class PhysicsHoles {
   private readonly meshes: THREE.Mesh[];
   private time = 0;
+  private triggered = false;
+  private onLossCallback: (() => void) | null = null;
 
   private constructor(meshes: THREE.Mesh[]) {
     this.meshes = meshes;
@@ -51,14 +57,43 @@ export class PhysicsHoles {
     return new PhysicsHoles(meshes);
   }
 
-  /** Animate the pulsing red glow. Call every frame with the frame delta. */
-  update(delta: number) {
+  onLoss(callback: () => void) {
+    this.onLossCallback = callback;
+  }
+
+  reset() {
+    this.triggered = false;
+  }
+
+  update(delta: number, ball: PhysicsBall) {
     this.time += delta;
     const pulse = 0.5 + 0.5 * Math.sin(this.time * 5);
     for (const mesh of this.meshes) {
       const mat = mesh.material as THREE.MeshStandardMaterial;
       mat.emissiveIntensity = 1 + pulse * 2;
       mat.opacity = 0.6 + pulse * 0.3;
+    }
+
+    if (this.triggered || this.meshes.length === 0) return;
+
+    const t = ball.body.translation();
+
+    for (const mesh of this.meshes) {
+      mesh.updateWorldMatrix(true, false);
+      const holeCenter = new THREE.Vector3();
+      new THREE.Box3().setFromObject(mesh).getCenter(holeCenter);
+
+      const dx = t.x - holeCenter.x;
+      const dz = t.z - holeCenter.z;
+
+      if (
+        Math.sqrt(dx * dx + dz * dz) < DETECTION_RADIUS &&
+        Math.abs(t.y - holeCenter.y) < DETECTION_HEIGHT
+      ) {
+        this.triggered = true;
+        this.onLossCallback?.();
+        break;
+      }
     }
   }
 }

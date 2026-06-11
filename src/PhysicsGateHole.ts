@@ -6,7 +6,7 @@ import { prepareGltfMaterials } from "./physicsUtils";
 
 const loader = new GLTFLoader();
 
-const WIN_DELAY = 1.0;
+const WIN_DELAY = 2.0;
 const DETECTION_RADIUS = 1.5;
 const DETECTION_HEIGHT = 2.0;
 
