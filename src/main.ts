@@ -2,10 +2,21 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import RAPIER from "@dimforge/rapier3d-compat";
 import ballModelUrl from "./ball.glb?url";
-import boardModelUrl from "./board-ground-level-2.glb?url";
+
+// level - 1
+import boardModelUrl from "./board-ground.glb?url";
+import puzzleModelUrl from "./puzzles.glb?url";
+
+
+// level - 2
+// import boardModelUrl from "./board-ground-level-2.glb?url";
+// import puzzleModelUrl from "./puzzle-2.glb?url";
+// import vfxHolesModelUrl from './level2-holes-vfx.glb?url';
+// import { PhysicsHoles } from "./PhysicsHoles";
+
+
 import wallsModelUrl from "./board-walls.glb?url";
 import gateModelUrl from "./board-gate.glb?url";
-import puzzleModelUrl from "./puzzle-2.glb?url";
 import stairsModelUrl from "./board-stairs.glb?url";
 import groundModelUrl from "./ground.glb?url";
 import bookModelUrl from "./book.glb?url";
@@ -16,12 +27,10 @@ import levelCalendarModelUrl from "./level-calendar.glb?url";
 import boxModelUrl from "./box.glb?url";
 import sandWatchModelUrl from "./sand-watch.glb?url";
 import dicesModelUrl from "./dices.glb?url";
-import vfxHolesModelUrl from './level2-holes-vfx.glb?url';
 import vfxGateHoleModelUrl from './gate-hole-vfx.glb?url';
 import { PhysicsBall } from "./PhysicsBall";
 import { PhysicsBoard } from "./PhysicsBoard";
 import { PhysicsGate } from "./PhysicsGate";
-import { PhysicsHoles } from "./PhysicsHoles";
 import { PhysicsPuzzle } from "./PhysicsPuzzle";
 import { FAN_OBJECT_NAME, PuzzleFanRotation } from "./PuzzleFanRotation";
 import { PhysicsStaticEnvironment } from "./PhysicsStaticEnvironment";
@@ -508,7 +517,7 @@ async function main() {
     scale: BOARD_SCALE,
   });
 
-  const holes = await PhysicsHoles.create(board, vfxHolesModelUrl);
+  // const holes = await PhysicsHoles.create(board, vfxHolesModelUrl);
 
   const puzzle = await PhysicsPuzzle.create(RAPIER, world, board, puzzleModelUrl, {
     scale: BOARD_SCALE,
@@ -565,15 +574,15 @@ async function main() {
   let lossPending = false;
 
   const lossOverlay = createLossOverlay();
-  holes.onLoss(() => {
-    if (lossPending || ballFrozen) return;
-    lossPending = true;
-    lossTimer = 0;
-    ball.autoResetEnabled = false;
-  });
+  // holes.onLoss(() => {
+  //   if (lossPending || ballFrozen) return;
+  //   lossPending = true;
+  //   lossTimer = 0;
+  //   ball.autoResetEnabled = false;
+  // });
   lossOverlay.onRetry(() => {
     lossOverlay.hide();
-    holes.reset();
+    // holes.reset();
     lossPending = false;
     lossTimer = 0;
     ball.autoResetEnabled = true;
@@ -594,7 +603,7 @@ async function main() {
   winOverlay.onNextLevel(() => {
     winOverlay.hide();
     gateHole.reset();
-    holes.reset();
+    // holes.reset();
     ball.autoResetEnabled = true;
     ball.reset();
     ball.visual.visible = true;
@@ -670,9 +679,9 @@ async function main() {
     physicsDebug?.update();
     lightDebug?.update();
     gateHole.update(delta, ball);
-    if (!ballFrozen && !gateHole.isNear) {
-      holes.update(delta, ball);
-    }
+    // if (!ballFrozen && !gateHole.isNear) {
+    //   holes.update(delta, ball);
+    // }
 
     if (lossPending && !ballFrozen) {
       lossTimer += delta;
