@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import type { PhysicsBoard } from "./PhysicsBoard";
+import type { BoardAnchor } from "./PhysicsBoard";
 import type { PhysicsBall } from "./PhysicsBall";
 import { prepareGltfMaterials } from "./physicsUtils";
 
@@ -18,13 +18,14 @@ export class PhysicsGateHole {
   private time = 0;
   private overTimer = 0;
   private triggered = false;
+  private active = true;
   private onWinCallback: (() => void) | null = null;
 
   private constructor(meshes: THREE.Mesh[]) {
     this.meshes = meshes;
   }
 
-  static async create(board: PhysicsBoard, modelUrl: string): Promise<PhysicsGateHole> {
+  static async create(board: BoardAnchor, modelUrl: string): Promise<PhysicsGateHole> {
     const gltf = await loader.loadAsync(modelUrl);
     const model = gltf.scene.clone();
     prepareGltfMaterials(model);
@@ -69,6 +70,19 @@ export class PhysicsGateHole {
     this.triggered = false;
   }
 
+  /** Enables win detection only; visuals always stay visible. */
+  setDetectionEnabled(enabled: boolean) {
+    this.active = enabled;
+    if (!enabled) {
+      this.overTimer = 0;
+    }
+  }
+
+  /** @deprecated Use setDetectionEnabled — meshes are always shown. */
+  setActive(active: boolean) {
+    this.setDetectionEnabled(active);
+  }
+
   update(delta: number, ball: PhysicsBall) {
     this.time += delta;
     const pulse = 0.5 + 0.5 * Math.sin(this.time * 5);
@@ -78,7 +92,7 @@ export class PhysicsGateHole {
       mat.opacity = 0.6 + pulse * 0.3;
     }
 
-    if (this.triggered || this.meshes.length === 0) return;
+    if (!this.active || this.triggered || this.meshes.length === 0) return;
 
     // World-space center of all gate hole meshes
     const worldBox = new THREE.Box3();

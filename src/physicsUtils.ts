@@ -3,6 +3,33 @@ import type RAPIER from "@dimforge/rapier3d-compat";
 
 export type BoardColliderMode = "trimesh" | "auto";
 
+/** Enables/disables a rigid-body and every collider attached to it. */
+export function setRigidBodyPhysicsEnabled(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+  enabled: boolean
+) {
+  body.setEnabled(enabled);
+  for (const collider of collectCollidersOnBody(world, body)) {
+    collider.setEnabled(enabled);
+  }
+}
+
+/** Returns every valid collider currently attached to a rigid-body. */
+export function collectCollidersOnBody(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody
+): RAPIER.Collider[] {
+  const colliders: RAPIER.Collider[] = [];
+  world.colliders.forEach((collider) => {
+    if (!collider.isValid()) return;
+    if (collider.parent() === body) {
+      colliders.push(collider);
+    }
+  });
+  return colliders;
+}
+
 export type ObjectBounds = {
   size: THREE.Vector3;
   center: THREE.Vector3;
@@ -333,10 +360,11 @@ export function addBoardBodyColliders(
     flatnessThreshold?: number;
     excludeObjectNames?: string[];
   } = {}
-) {
+): RAPIER.Collider[] {
   const colliderMode = options.colliderMode ?? "auto";
   const flatnessThreshold = options.flatnessThreshold ?? 0.15;
   const excludeObjectNames = options.excludeObjectNames ?? [];
+  const colliders: RAPIER.Collider[] = [];
 
   root.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return;
@@ -349,23 +377,29 @@ export function addBoardBodyColliders(
       const bounds = getBounds(child);
       const center = bounds.center;
 
-      world.createCollider(
-        RAPIER.ColliderDesc.cuboid(
-          bounds.size.x / 2,
-          bounds.size.y / 2,
-          bounds.size.z / 2
-        ).setTranslation(center.x, center.y, center.z),
-        body
+      colliders.push(
+        world.createCollider(
+          RAPIER.ColliderDesc.cuboid(
+            bounds.size.x / 2,
+            bounds.size.y / 2,
+            bounds.size.z / 2
+          ).setTranslation(center.x, center.y, center.z),
+          body
+        )
       );
       return;
     }
 
     const { vertices, indices } = extractMeshTrimesh(child);
-    world.createCollider(
-      RAPIER.ColliderDesc.trimesh(vertices, indices),
-      body
+    colliders.push(
+      world.createCollider(
+        RAPIER.ColliderDesc.trimesh(vertices, indices),
+        body
+      )
     );
   });
+
+  return colliders;
 }
 
 export type RotatingBoardCollider = {

@@ -11,18 +11,22 @@ const DEBUG_HOLE_TRIGGERS = true;
 const DETECTION_RADIUS = 0.3;
 const TRIGGER_HEIGHT = 0.01;
 
-type HolePosition = {
+export type HolePosition = {
   x: number;
   z: number;
 };
 
-const HOLE_POSITIONS: HolePosition[] = [
+const DEFAULT_HOLE_POSITIONS: HolePosition[] = [
   { x: -2.21, z: 2.42 },
   { x: 2.08, z: -0.14 },
   { x: -2.21, z: -0.15 },
   { x: -2.21, z: -2.49 },
   { x: 2.08, z: -2.49 },
 ];
+
+export type PhysicsHolesOptions = {
+  holePositions?: HolePosition[];
+};
 
 const HOLE_Y = -0.1;
 const HOLES_MODEL_Y_OFFSET = 0  ;
@@ -56,6 +60,7 @@ export class PhysicsHoles {
 
   private time = 0;
   private triggered = false;
+  private active = false;
   private onLossCallback: (() => void) | null = null;
 
   private constructor(meshes: THREE.Mesh[], triggers: HoleTrigger[]) {
@@ -65,8 +70,10 @@ export class PhysicsHoles {
 
   static async create(
     board: PhysicsBoard,
-    modelUrl: string
+    modelUrl: string,
+    options: PhysicsHolesOptions = {}
   ): Promise<PhysicsHoles> {
+    const holePositions = options.holePositions ?? DEFAULT_HOLE_POSITIONS;
     const gltf = await loader.loadAsync(modelUrl);
     const model = gltf.scene.clone();
 
@@ -92,7 +99,7 @@ export class PhysicsHoles {
 
     const triggers: HoleTrigger[] = [];
 
-    for (const hole of HOLE_POSITIONS) {
+    for (const hole of holePositions) {
       const debugMesh = new THREE.Mesh(
         new THREE.CylinderGeometry(
           DETECTION_RADIUS,
@@ -118,6 +125,15 @@ export class PhysicsHoles {
     return new PhysicsHoles(meshes, triggers);
   }
 
+  get isActive(): boolean {
+    return this.active;
+  }
+
+  /** Debug cylinder helpers used for hole trigger visualization. */
+  getDebugHelpers(): THREE.Object3D[] {
+    return this.triggers.map((trigger) => trigger.debugMesh);
+  }
+
   onLoss(callback: () => void) {
     this.onLossCallback = callback;
   }
@@ -132,6 +148,19 @@ export class PhysicsHoles {
     }
   }
 
+  setActive(active: boolean) {
+    this.active = active;
+    for (const mesh of this.meshes) {
+      mesh.visible = active;
+    }
+    for (const trigger of this.triggers) {
+      trigger.debugMesh.visible = active && DEBUG_HOLE_TRIGGERS;
+    }
+    if (!active) {
+      this.triggered = false;
+    }
+  }
+
   update(delta: number, ball: PhysicsBall) {
     this.time += delta;
 
@@ -143,7 +172,7 @@ export class PhysicsHoles {
       mat.opacity = 0.6 + pulse * 0.3;
     }
 
-    if (this.triggered) return;
+    if (!this.active || this.triggered) return;
 
     const ballPosition = ball.body.translation();
 

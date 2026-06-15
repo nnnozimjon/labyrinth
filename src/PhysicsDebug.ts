@@ -7,6 +7,8 @@ export type PhysicsDebugOptions = {
   color?: number;
   wireOpacity?: number;
   lineColor?: number;
+  /** When set, only matching colliders render debug wireframes. */
+  shouldShowCollider?: (collider: RapierCollider) => boolean;
 };
 
 function createWireMaterial(color: number, opacity: number) {
@@ -226,6 +228,7 @@ export class PhysicsDebugRenderer {
   private readonly world: RAPIER.World;
   private readonly wireMaterial: THREE.MeshBasicMaterial;
   private readonly lineColor: number;
+  private readonly shouldShowCollider?: (collider: RapierCollider) => boolean;
   private readonly objectsByHandle = new Map<number, THREE.Object3D>();
 
   constructor(
@@ -235,6 +238,7 @@ export class PhysicsDebugRenderer {
   ) {
     this.world = world;
     this.scene = scene;
+    this.shouldShowCollider = options.shouldShowCollider;
     this.wireMaterial = createWireMaterial(
       options.color ?? 0x00ffff,
       options.wireOpacity ?? 0.7
@@ -249,9 +253,22 @@ export class PhysicsDebugRenderer {
       if (!collider.isValid()) return;
 
       const handle = collider.handle;
-      activeHandles.add(handle);
+      const showCollider =
+        this.shouldShowCollider === undefined || this.shouldShowCollider(collider);
 
       let debugObject = this.objectsByHandle.get(handle);
+
+      if (!showCollider) {
+        if (debugObject) {
+          this.scene.remove(debugObject);
+          this.disposeObject(debugObject);
+          this.objectsByHandle.delete(handle);
+        }
+        return;
+      }
+
+      activeHandles.add(handle);
+
       if (!debugObject) {
         debugObject = createDebugObject(
           collider,

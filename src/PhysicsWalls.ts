@@ -1,5 +1,5 @@
 import type RAPIER from "@dimforge/rapier3d-compat";
-import type { PhysicsBoard } from "./PhysicsBoard";
+import type { BoardAnchor } from "./PhysicsBoard";
 import {
   PhysicsBoardAttachment,
   type PhysicsBoardAttachmentOptions,
@@ -19,7 +19,7 @@ export class PhysicsWalls {
   static async create(
     RAPIER: RapierModule,
     world: RAPIER.World,
-    board: PhysicsBoard,
+    board: BoardAnchor,
     modelUrl: string,
     options: PhysicsWallsOptions = {}
   ): Promise<PhysicsWalls> {

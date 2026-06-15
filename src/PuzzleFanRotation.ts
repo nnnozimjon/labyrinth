@@ -71,10 +71,21 @@ export class PuzzleFanRotation {
     return new PuzzleFanRotation(pivot, physics.boardVisual, colliders);
   }
 
+  getColliders(): RAPIER.Collider[] {
+    return this.colliders.map((entry) => entry.collider);
+  }
+
+  setEnabled(enabled: boolean) {
+    for (const entry of this.colliders) {
+      entry.collider.setEnabled(enabled);
+    }
+  }
+
   update(delta: number, speed = FAN_ROTATION_SPEED): void {
     this.pivot.rotateY(speed * delta);
 
     for (const entry of this.colliders) {
+      if (!entry.collider.isEnabled()) continue;
       syncRotatingBoardCollider(entry, this.boardVisual);
     }
   }

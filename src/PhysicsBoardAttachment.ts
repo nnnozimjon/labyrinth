@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type RAPIER from "@dimforge/rapier3d-compat";
-import type { PhysicsBoard } from "./PhysicsBoard";
+import type { BoardAnchor } from "./PhysicsBoard";
 import {
   addBoardBodyColliders,
   prepareGltfMaterials,
@@ -40,7 +40,7 @@ export class PhysicsBoardAttachment {
   static async create(
     RAPIER: RapierModule,
     world: RAPIER.World,
-    board: PhysicsBoard,
+    board: BoardAnchor,
     modelUrl: string,
     options: PhysicsBoardAttachmentOptions = {}
   ): Promise<PhysicsBoardAttachment> {

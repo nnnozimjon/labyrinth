@@ -3,16 +3,15 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import RAPIER from "@dimforge/rapier3d-compat";
 import ballModelUrl from "./ball.glb?url";
 
-// level - 1
-import boardModelUrl from "./board-ground.glb?url";
-import puzzleModelUrl from "./puzzles.glb?url";
-
-
-// level - 2
-// import boardModelUrl from "./board-ground-level-2.glb?url";
-// import puzzleModelUrl from "./puzzle-2.glb?url";
-// import vfxHolesModelUrl from './level2-holes-vfx.glb?url';
-// import { PhysicsHoles } from "./PhysicsHoles";
+import boardLevel1ModelUrl from "./board-ground.glb?url";
+import puzzleLevel1ModelUrl from "./puzzles.glb?url";
+import boardLevel2ModelUrl from "./board-ground-level-2.glb?url";
+import puzzleLevel2ModelUrl from "./puzzle-2.glb?url";
+import vfxHolesLevel2ModelUrl from "./level2-holes-vfx.glb?url";
+import boardLevel3ModelUrl from "./board-ground-3.glb?url";
+import puzzleLevel3ModelUrl from "./level3-puzzle.glb?url";
+import vfxHolesLevel3ModelUrl from "./vfx-holes-level3.glb?url";
+import { PhysicsHoles } from "./PhysicsHoles";
 
 
 import wallsModelUrl from "./board-walls.glb?url";
@@ -39,6 +38,7 @@ import { PhysicsStairs } from "./PhysicsStairs";
 import { PhysicsWalls } from "./PhysicsWalls";
 import { PhysicsDebugRenderer } from "./PhysicsDebug";
 import { LightDebugRenderer } from "./LightDebugRenderer";
+import { LevelManager } from "./LevelManager";
 import { logSceneHierarchy } from "./physicsUtils";
 import {
   SAND_WATCH_MATERIAL_OVERRIDES,
@@ -104,7 +104,7 @@ const GROUND_SCALE = 10;
 const BALL_COLLIDER_RADIUS: number | undefined = 0.5;
 
 /** When true, renders wireframe debug visuals for all physics colliders. */
-const SHOW_COLLIDERS = true;
+const SHOW_COLLIDERS = false;
 
 /** When true, shows helpers for scene lights (position and direction). */
 const SHOW_LIGHT_HELPERS = false;
@@ -118,18 +118,111 @@ const DEBUG_SSS_UI = true;
 /** When true, shows a lil-gui panel to position and tune the downward bulb light. */
 const DEBUG_BULB_LIGHT = true;
 
+/** Start on this level (1–3). Set to 1 for normal play. */
+const DEBUG_START_LEVEL: number = 3;
+
 /** How many units above the final position the puzzles start for the intro animation. */
 const PUZZLE_INTRO_START_Y = -30;
 
-/** Duration in seconds for the puzzle drop-in animation. */
+/** Duration in seconds for the puzzle drop-in / exit animation. */
 const PUZZLE_INTRO_DURATION = 2;
+
+/** Duration in seconds for the level-2 board-ground fade-in. */
+const BOARD_FADE_DURATION = 2;
+
+/** Pause after the win modal closes before the level swap animation begins. */
+const LEVEL_TRANSITION_DELAY = 1;
 
 /** Manual placement for each puzzle obstacle (board-local coordinates). */
 const PUZZLE_PLACEMENTS = [
   {
-    position: { x: 0, z: 0, y: 0 }, // final resting y position
+    position: { x: 0, z: 0, y: 0 },
   },
 ];
+
+const TOTAL_LEVELS = 3;
+
+type LevelContent = {
+  board: PhysicsBoard;
+  puzzle: PhysicsPuzzle;
+  holes: PhysicsHoles | null;
+  fans: PuzzleFanRotation[];
+};
+
+type LevelTransitionPhase = "none" | "waiting" | "level_out" | "level_in";
+
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+/** Mirror of ease-out for sinking / exit animations. */
+function easeInCubic(t: number): number {
+  return t * t * t;
+}
+
+function ensurePuzzleFinalY(visuals: THREE.Object3D[]) {
+  for (const visual of visuals) {
+    if (visual.userData.finalY === undefined) {
+      visual.userData.finalY = visual.position.y;
+    }
+  }
+}
+
+function preparePuzzleDropAnimation(visuals: THREE.Object3D[], startOffsetY: number) {
+  ensurePuzzleFinalY(visuals);
+  for (const visual of visuals) {
+    visual.position.y = visual.userData.finalY + startOffsetY;
+  }
+}
+
+function animatePuzzleOffset(visuals: THREE.Object3D[], offsetY: number) {
+  for (const visual of visuals) {
+    visual.position.y = visual.userData.finalY + offsetY;
+  }
+}
+
+/** Rise from below — used on level intro. */
+function animatePuzzleRise(visuals: THREE.Object3D[], t: number) {
+  animatePuzzleOffset(visuals, PUZZLE_INTRO_START_Y * (1 - easeOutCubic(t)));
+}
+
+/** Sink downward — reverse of rise; hide visuals once t >= 1. */
+function animatePuzzleSink(visuals: THREE.Object3D[], t: number) {
+  animatePuzzleOffset(visuals, PUZZLE_INTRO_START_Y * easeInCubic(t));
+}
+
+function hidePuzzlesAfterSink(puzzle: PhysicsPuzzle, visuals: THREE.Object3D[]) {
+  animatePuzzleOffset(visuals, PUZZLE_INTRO_START_Y);
+  puzzle.setVisible(false);
+}
+
+function registerLevelContent(
+  levelManager: LevelManager,
+  id: number,
+  content: LevelContent,
+  holes: PhysicsHoles | null
+) {
+  levelManager.registerLevelObject(id, content.board.visual);
+  levelManager.registerLevelObject(id, content.puzzle.visuals[0]);
+  levelManager.registerLevelBody(id, content.board.body);
+
+  for (const collider of content.board.getColliders()) {
+    levelManager.registerLevelCollider(id, collider);
+  }
+  for (const collider of content.puzzle.getColliders()) {
+    levelManager.registerLevelCollider(id, collider);
+  }
+  for (const fan of content.fans) {
+    for (const collider of fan.getColliders()) {
+      levelManager.registerLevelCollider(id, collider);
+    }
+  }
+  if (holes) {
+    for (const helper of holes.getDebugHelpers()) {
+      levelManager.registerDebugHelper(id, helper);
+    }
+  }
+}
 
 function createLossOverlay() {
   const style = document.createElement("style");
@@ -286,6 +379,11 @@ async function main() {
   scene.add(staticWorldGroup);
   scene.add(tiltingBoardGroup);
 
+  const levelManager = new LevelManager(world);
+  levelManager.createLevel(1, tiltingBoardGroup);
+  levelManager.createLevel(2, tiltingBoardGroup);
+  levelManager.createLevel(3, tiltingBoardGroup);
+
   await PhysicsStaticEnvironment.create(
     RAPIER,
     world,
@@ -303,21 +401,57 @@ async function main() {
     }
   );
 
+  const boardTextureOptions = {
+    textureUrl: "/textures/ground-2.png",
+    maxAnisotropy: renderer.capabilities.getMaxAnisotropy(),
+    repeat: { x: 2.5, y: 2 },
+    color: 0xffffff,
+    roughness: 0.9,
+    metalness: 0.1,
+  };
+
   const board = await PhysicsBoard.create(
     RAPIER,
     world,
-    tiltingBoardGroup,
-    boardModelUrl,
+    levelManager.getLevel(1)!.group,
+    boardLevel1ModelUrl,
     {
       scale: BOARD_SCALE,
-      textureUrl: "/textures/ground-2.png",
-      maxAnisotropy: renderer.capabilities.getMaxAnisotropy(),
-      repeat: { x: 2.5, y: 2 },
-      color: 0xffffff,
-      roughness: 0.9,
-      metalness: 0.1,
+      ...boardTextureOptions,
     }
   );
+
+  // Shared anchor for walls, gate, and gate-hole — always visible across levels.
+  const sharedBoard = PhysicsBoard.createSharedAnchor(
+    RAPIER,
+    world,
+    tiltingBoardGroup,
+    board
+  );
+
+  const boardLevel2 = await PhysicsBoard.create(
+    RAPIER,
+    world,
+    levelManager.getLevel(2)!.group,
+    boardLevel2ModelUrl,
+    {
+      scale: BOARD_SCALE,
+      ...boardTextureOptions,
+    }
+  );
+  boardLevel2.setOpacity(0);
+
+  const boardLevel3 = await PhysicsBoard.create(
+    RAPIER,
+    world,
+    levelManager.getLevel(3)!.group,
+    boardLevel3ModelUrl,
+    {
+      scale: BOARD_SCALE,
+      ...boardTextureOptions,
+    }
+  );
+  boardLevel3.setOpacity(0);
 
   await PhysicsStairs.create(RAPIER, world, staticWorldGroup, board, stairsModelUrl, {
     scale: BOARD_SCALE,
@@ -385,8 +519,6 @@ async function main() {
   const lampPosition = new THREE.Vector3();
   lamp.visual.getWorldPosition(lampPosition);
   aimLampAt(sceneLights, lampPosition, boardFocus);
-
-  const gateHole = await PhysicsGateHole.create(board, vfxGateHoleModelUrl);
 
   await PhysicsStaticEnvironment.create(
     RAPIER,
@@ -481,12 +613,6 @@ async function main() {
     board
   );
 
-  
-  // camera.position.set(0.075, 4.137, -8.108);
-  // camera.rotation.set(-2.667, -0.009, -3.137);
-  // controls.target.set(0.15, 0.44, -0.913);
-  // controls.update();
-
   camera.position.set(0.37, 8.582, -7.819);
   camera.rotation.set(-2.274, 0.021, 3.117);
   controls.target.set(0.15, 0.44, -0.913);
@@ -508,36 +634,65 @@ async function main() {
   );
   
 
-  await PhysicsWalls.create(RAPIER, world, board, wallsModelUrl, {
+  await PhysicsWalls.create(RAPIER, world, sharedBoard, wallsModelUrl, {
     scale: BOARD_SCALE,
     textureUrl: "/textures/fabric-2.png",
   });
 
-  await PhysicsGate.create(RAPIER, world, board, gateModelUrl, {
+  await PhysicsGate.create(RAPIER, world, sharedBoard, gateModelUrl, {
     scale: BOARD_SCALE,
   });
 
-  // const holes = await PhysicsHoles.create(board, vfxHolesModelUrl);
+  const gateHole = await PhysicsGateHole.create(sharedBoard, vfxGateHoleModelUrl);
 
-  const puzzle = await PhysicsPuzzle.create(RAPIER, world, board, puzzleModelUrl, {
-    scale: BOARD_SCALE,
-    placements: PUZZLE_PLACEMENTS,
-    textureUrl: "/textures/fabric-2.png",
-    excludeColliderObjectNames: [FAN_OBJECT_NAME],
-  });
+  const holesLevel2 = await PhysicsHoles.create(boardLevel2, vfxHolesLevel2ModelUrl);
+  const holesLevel3 = await PhysicsHoles.create(boardLevel3, vfxHolesLevel3ModelUrl);
 
-  // --- Puzzle intro drop animation setup ---
-  // Save each visual's final Y, then offset them upward to start high
-  puzzle.visuals.forEach((v) => {
-    v.userData.finalY = v.position.y;
-    v.position.y += PUZZLE_INTRO_START_Y;
-  });
+  const puzzleLevel1 = await PhysicsPuzzle.create(
+    RAPIER,
+    world,
+    board,
+    puzzleLevel1ModelUrl,
+    {
+      scale: BOARD_SCALE,
+      placements: PUZZLE_PLACEMENTS,
+      textureUrl: "/textures/fabric-2.png",
+      excludeColliderObjectNames: [FAN_OBJECT_NAME],
+    }
+  );
+
+  const puzzleLevel2 = await PhysicsPuzzle.create(
+    RAPIER,
+    world,
+    boardLevel2,
+    puzzleLevel2ModelUrl,
+    {
+      scale: BOARD_SCALE,
+      placements: PUZZLE_PLACEMENTS,
+      textureUrl: "/textures/fabric-2.png",
+      excludeColliderObjectNames: [FAN_OBJECT_NAME],
+    }
+  );
+
+  const puzzleLevel3 = await PhysicsPuzzle.create(
+    RAPIER,
+    world,
+    boardLevel3,
+    puzzleLevel3ModelUrl,
+    {
+      scale: BOARD_SCALE,
+      placements: PUZZLE_PLACEMENTS,
+      textureUrl: "/textures/fabric-2.png",
+      excludeColliderObjectNames: [FAN_OBJECT_NAME],
+    }
+  );
+
+  preparePuzzleDropAnimation(puzzleLevel1.visuals, PUZZLE_INTRO_START_Y);
 
   let puzzleIntroTime = 0;
-  let puzzleIntroActive = true;
-  // ---------------------------------------
+  let puzzleIntroActive = DEBUG_START_LEVEL === 1;
 
-  const puzzleFans = puzzle.visuals
+  const puzzleFansLevel1 = puzzleLevel1.visuals
     .map((visual) =>
       PuzzleFanRotation.attach(visual, {
         RAPIER,
@@ -548,9 +703,108 @@ async function main() {
     )
     .filter((fan): fan is PuzzleFanRotation => fan !== null);
 
+  const puzzleFansLevel2 = puzzleLevel2.visuals
+    .map((visual) =>
+      PuzzleFanRotation.attach(visual, {
+        RAPIER,
+        world,
+        boardBody: boardLevel2.body,
+        boardVisual: boardLevel2.visual,
+      })
+    )
+    .filter((fan): fan is PuzzleFanRotation => fan !== null);
+
+  const puzzleFansLevel3 = puzzleLevel3.visuals
+    .map((visual) =>
+      PuzzleFanRotation.attach(visual, {
+        RAPIER,
+        world,
+        boardBody: boardLevel3.body,
+        boardVisual: boardLevel3.visual,
+      })
+    )
+    .filter((fan): fan is PuzzleFanRotation => fan !== null);
+
+  const levelContents = new Map<number, LevelContent>([
+    [
+      1,
+      {
+        board,
+        puzzle: puzzleLevel1,
+        holes: null,
+        fans: puzzleFansLevel1,
+      },
+    ],
+    [
+      2,
+      {
+        board: boardLevel2,
+        puzzle: puzzleLevel2,
+        holes: holesLevel2,
+        fans: puzzleFansLevel2,
+      },
+    ],
+    [
+      3,
+      {
+        board: boardLevel3,
+        puzzle: puzzleLevel3,
+        holes: holesLevel3,
+        fans: puzzleFansLevel3,
+      },
+    ],
+  ]);
+
+  const getLevelContent = (id: number): LevelContent => {
+    const content = levelContents.get(id);
+    if (!content) {
+      throw new Error(`Missing level content for level ${id}`);
+    }
+    return content;
+  };
+
+  registerLevelContent(levelManager, 1, getLevelContent(1), null);
+  registerLevelContent(levelManager, 2, getLevelContent(2), holesLevel2);
+  registerLevelContent(levelManager, 3, getLevelContent(3), holesLevel3);
+
+  levelManager.setLevelHooks(1, {
+    onActivate: () => gateHole.setDetectionEnabled(true),
+    onDeactivate: () => gateHole.setDetectionEnabled(false),
+  });
+  levelManager.setLevelHooks(2, {
+    onActivate: () => {
+      holesLevel2.setActive(true);
+      gateHole.setDetectionEnabled(true);
+    },
+    onDeactivate: () => {
+      holesLevel2.setActive(false);
+    },
+  });
+  levelManager.setLevelHooks(3, {
+    onActivate: () => holesLevel3.setActive(true),
+    onDeactivate: () => holesLevel3.setActive(false),
+  });
+
+  levelManager.setCurrentLevel(DEBUG_START_LEVEL);
+  if (DEBUG_START_LEVEL !== 1) {
+    puzzleIntroActive = false;
+  }
+  if (DEBUG_START_LEVEL === 2) {
+    getLevelContent(2).board.setOpacity(1);
+  }
+  if (DEBUG_START_LEVEL === 3) {
+    getLevelContent(3).board.setOpacity(1);
+  }
+
+  let transitionPhase: LevelTransitionPhase = "none";
+  let transitionTime = 0;
+  let transitionFromLevel = 1;
+  let transitionToLevel = 2;
+  let pendingNextLevel: number | null = null;
+
   const wallOverride = BOARD_WALL_MATERIAL_OVERRIDES["wall-around"];
   createSubsurfaceScatteringDebugUI({
-    root: board.visual,
+    root: sharedBoard.visual,
     enabled: DEBUG_SSS_UI,
     color: wallOverride?.color ?? FORMULA55_YELLOW,
     roughness: wallOverride?.roughness ?? 0.8,
@@ -574,15 +828,17 @@ async function main() {
   let lossPending = false;
 
   const lossOverlay = createLossOverlay();
-  // holes.onLoss(() => {
-  //   if (lossPending || ballFrozen) return;
-  //   lossPending = true;
-  //   lossTimer = 0;
-  //   ball.autoResetEnabled = false;
-  // });
+  for (const [levelId, content] of levelContents) {
+    content.holes?.onLoss(() => {
+      if (lossPending || ballFrozen || levelManager.getCurrentLevel() !== levelId) return;
+      lossPending = true;
+      lossTimer = 0;
+      ball.autoResetEnabled = false;
+    });
+  }
   lossOverlay.onRetry(() => {
     lossOverlay.hide();
-    // holes.reset();
+    getLevelContent(levelManager.getCurrentLevel()).holes?.reset();
     lossPending = false;
     lossTimer = 0;
     ball.autoResetEnabled = true;
@@ -590,24 +846,48 @@ async function main() {
     ball.visual.visible = true;
     ballFrozen = false;
   });
-
+  
   const winOverlay = createWinOverlay();
+
+  function finishLevelTransition() {
+    levelManager.setCurrentLevel(transitionToLevel);
+    ball.autoResetEnabled = true;
+    ball.reset();
+    ball.visual.visible = true;
+    ballFrozen = false;
+    transitionPhase = "none";
+    gateHole.reset();
+  }
+
+  function startLevelTransition(fromLevel: number, toLevel: number) {
+    transitionFromLevel = fromLevel;
+    transitionToLevel = toLevel;
+    transitionPhase = "level_out";
+    transitionTime = 0;
+    const from = getLevelContent(fromLevel);
+    ensurePuzzleFinalY(from.puzzle.visuals);
+    from.puzzle.setCollidersEnabled(false);
+    from.fans.forEach((fan) => fan.setEnabled(false));
+  }
+
   gateHole.onWin(() => {
-    if (ballFrozen) return;
+    if (ballFrozen || transitionPhase !== "none") return;
+    const current = levelManager.getCurrentLevel();
+    if (current >= TOTAL_LEVELS) return;
     lossPending = false;
     lossTimer = 0;
     ballFrozen = true;
     ball.visual.visible = false;
     winOverlay.show();
   });
+
   winOverlay.onNextLevel(() => {
     winOverlay.hide();
-    gateHole.reset();
-    // holes.reset();
-    ball.autoResetEnabled = true;
-    ball.reset();
-    ball.visual.visible = true;
-    ballFrozen = false;
+    const current = levelManager.getCurrentLevel();
+    if (current >= TOTAL_LEVELS) return;
+    pendingNextLevel = current + 1;
+    transitionPhase = "waiting";
+    transitionTime = 0;
   });
 
   // enable shadows on static world group and tilting board group
@@ -616,7 +896,10 @@ async function main() {
   // enableShadowsOnObject(ball.visual);
 
   const physicsDebug = SHOW_COLLIDERS
-    ? new PhysicsDebugRenderer(world, scene)
+    ? new PhysicsDebugRenderer(world, scene, {
+        shouldShowCollider: (collider) =>
+          levelManager.isColliderVisibleInDebug(collider),
+      })
     : null;
   
   const lightDebug = SHOW_LIGHT_HELPERS ? new LightDebugRenderer(scene) : null;
@@ -650,28 +933,66 @@ async function main() {
 
     boardEuler.set(currentTiltX, 0, currentTiltZ);
     boardQuaternion.setFromEuler(boardEuler);
-    board.setRotation(boardQuaternion);
-    puzzleFans.forEach((fan) => fan.update(delta));
+    for (const content of levelContents.values()) {
+      content.board.setRotation(boardQuaternion);
+    }
+    sharedBoard.setRotation(boardQuaternion);
 
-    // --- Puzzle intro drop animation ---
+    const fanLevel =
+      transitionPhase === "level_in"
+        ? transitionToLevel
+        : levelManager.getCurrentLevel();
+    getLevelContent(fanLevel).fans.forEach((fan) => fan.update(delta));
+
     if (puzzleIntroActive) {
       puzzleIntroTime += delta;
       const t = Math.min(puzzleIntroTime / PUZZLE_INTRO_DURATION, 1);
-      // Ease out cubic: fast drop, gentle landing
-      const eased = 1 - Math.pow(1 - t, 3);
-      const offsetY = PUZZLE_INTRO_START_Y * (1 - eased);
-      puzzle.visuals.forEach((v) => {
-        v.position.y = v.userData.finalY + offsetY;
-      });
+      animatePuzzleRise(puzzleLevel1.visuals, t);
       if (t >= 1) {
-        // Snap exactly to final position and stop animating
-        puzzle.visuals.forEach((v) => {
-          v.position.y = v.userData.finalY;
-        });
+        animatePuzzleOffset(puzzleLevel1.visuals, 0);
         puzzleIntroActive = false;
       }
     }
-    // ------------------------------------
+
+    if (transitionPhase === "waiting") {
+      transitionTime += delta;
+      if (transitionTime >= LEVEL_TRANSITION_DELAY && pendingNextLevel !== null) {
+        startLevelTransition(levelManager.getCurrentLevel(), pendingNextLevel);
+        pendingNextLevel = null;
+      }
+    } else if (transitionPhase === "level_out") {
+      const from = getLevelContent(transitionFromLevel);
+      transitionTime += delta;
+      const t = Math.min(transitionTime / PUZZLE_INTRO_DURATION, 1);
+      animatePuzzleSink(from.puzzle.visuals, t);
+      from.board.setOpacity(1 - easeInCubic(t));
+      if (t >= 1) {
+        hidePuzzlesAfterSink(from.puzzle, from.puzzle.visuals);
+        from.board.setOpacity(0);
+        levelManager.setLevelState(transitionFromLevel, { visuals: false, physics: false });
+        transitionPhase = "level_in";
+        transitionTime = 0;
+        const to = getLevelContent(transitionToLevel);
+        preparePuzzleDropAnimation(to.puzzle.visuals, PUZZLE_INTRO_START_Y);
+        to.puzzle.setVisible(true);
+        to.board.setOpacity(0);
+        levelManager.setLevelState(transitionToLevel, { visuals: true, physics: false });
+      }
+    } else if (transitionPhase === "level_in") {
+      const to = getLevelContent(transitionToLevel);
+      transitionTime += delta;
+      const puzzleT = Math.min(transitionTime / PUZZLE_INTRO_DURATION, 1);
+      const boardT = Math.min(transitionTime / BOARD_FADE_DURATION, 1);
+
+      animatePuzzleRise(to.puzzle.visuals, puzzleT);
+      to.board.setOpacity(easeOutCubic(boardT));
+
+      if (puzzleT >= 1 && boardT >= 1) {
+        animatePuzzleOffset(to.puzzle.visuals, 0);
+        to.board.setOpacity(1);
+        finishLevelTransition();
+      }
+    }
 
     world.timestep = delta;
     world.step();
@@ -679,9 +1000,10 @@ async function main() {
     physicsDebug?.update();
     lightDebug?.update();
     gateHole.update(delta, ball);
-    // if (!ballFrozen && !gateHole.isNear) {
-    //   holes.update(delta, ball);
-    // }
+    const activeHoles = getLevelContent(levelManager.getCurrentLevel()).holes;
+    if (!ballFrozen && activeHoles?.isActive && !gateHole.isNear) {
+      activeHoles.update(delta, ball);
+    }
 
     if (lossPending && !ballFrozen) {
       lossTimer += delta;

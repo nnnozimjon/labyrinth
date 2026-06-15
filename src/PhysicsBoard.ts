@@ -31,13 +31,22 @@ type RapierModule = typeof RAPIER;
 
 const loader = new GLTFLoader();
 
-export class PhysicsBoard {
+/** Visual + physics anchor used by the board and shared attachments (walls, gate). */
+export type BoardAnchor = {
+  readonly visual: THREE.Object3D;
+  readonly body: RAPIER.RigidBody;
+  readonly centerOffset: THREE.Vector3;
+  readonly scale: number;
+};
+
+export class PhysicsBoard implements BoardAnchor {
   readonly visual: THREE.Group;
   readonly body: RAPIER.RigidBody;
   readonly bounds: ObjectBounds;
   readonly surfaceY: number;
   readonly scale: number;
   readonly centerOffset: THREE.Vector3;
+  private readonly colliders: RAPIER.Collider[];
 
   private constructor(
     visual: THREE.Group,
@@ -45,7 +54,8 @@ export class PhysicsBoard {
     bounds: ObjectBounds,
     surfaceY: number,
     scale: number,
-    centerOffset: THREE.Vector3
+    centerOffset: THREE.Vector3,
+    colliders: RAPIER.Collider[]
   ) {
     this.visual = visual;
     this.body = body;
@@ -53,6 +63,7 @@ export class PhysicsBoard {
     this.surfaceY = surfaceY;
     this.scale = scale;
     this.centerOffset = centerOffset;
+    this.colliders = colliders;
   }
 
   static async create(
@@ -100,21 +111,99 @@ export class PhysicsBoard {
     );
     const body = world.createRigidBody(bodyDesc);
 
+    const colliders: RAPIER.Collider[] = [];
     if (useBoxCollider) {
-      world.createCollider(
-        RAPIER.ColliderDesc.cuboid(
-          bounds.size.x / 2,
-          bounds.size.y / 2,
-          bounds.size.z / 2
-        ),
-        body
+      colliders.push(
+        world.createCollider(
+          RAPIER.ColliderDesc.cuboid(
+            bounds.size.x / 2,
+            bounds.size.y / 2,
+            bounds.size.z / 2
+          ),
+          body
+        )
       );
     } else {
       const { vertices, indices } = extractLocalTrimesh(model);
-      world.createCollider(RAPIER.ColliderDesc.trimesh(vertices, indices), body);
+      colliders.push(
+        world.createCollider(RAPIER.ColliderDesc.trimesh(vertices, indices), body)
+      );
     }
 
-    return new PhysicsBoard(visual, body, bounds, surfaceY, scale, centerOffset);
+    return new PhysicsBoard(visual, body, bounds, surfaceY, scale, centerOffset, colliders);
+  }
+
+  /**
+   * Empty kinematic anchor aligned with a board — for walls, gate, and other
+   * shared content that must stay visible across level switches.
+   */
+  static createSharedAnchor(
+    RAPIER: RapierModule,
+    world: RAPIER.World,
+    parent: THREE.Object3D,
+    reference: PhysicsBoard
+  ): BoardAnchor & { setRotation(quaternion: THREE.Quaternion): void } {
+    const visual = new THREE.Group();
+    visual.name = "board-shared";
+    visual.position.copy(reference.visual.position);
+    parent.add(visual);
+
+    const translation = reference.body.translation();
+    const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+      translation.x,
+      translation.y,
+      translation.z
+    );
+    const body = world.createRigidBody(bodyDesc);
+
+    return {
+      visual,
+      body,
+      centerOffset: reference.centerOffset,
+      scale: reference.scale,
+      setRotation(quaternion: THREE.Quaternion) {
+        visual.quaternion.copy(quaternion);
+        body.setNextKinematicRotation({
+          x: quaternion.x,
+          y: quaternion.y,
+          z: quaternion.z,
+          w: quaternion.w,
+        });
+      },
+    };
+  }
+
+  getColliders(): readonly RAPIER.Collider[] {
+    return this.colliders;
+  }
+
+  setCollidersEnabled(enabled: boolean) {
+    for (const collider of this.colliders) {
+      collider.setEnabled(enabled);
+    }
+  }
+
+  setVisible(visible: boolean) {
+    this.visual.visible = visible;
+  }
+
+  setEnabled(enabled: boolean) {
+    this.setVisible(enabled);
+    this.setCollidersEnabled(enabled);
+  }
+
+  setOpacity(opacity: number) {
+    this.visual.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      const materials = Array.isArray(child.material)
+        ? child.material
+        : [child.material];
+      for (const material of materials) {
+        material.transparent = opacity < 1;
+        material.opacity = opacity;
+        material.needsUpdate = true;
+      }
+    });
   }
 
   setRotation(quaternion: THREE.Quaternion) {

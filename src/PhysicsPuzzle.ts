@@ -39,9 +39,11 @@ const loader = new GLTFLoader();
 
 export class PhysicsPuzzle {
   readonly visuals: THREE.Object3D[];
+  private readonly colliders: RAPIER.Collider[];
 
-  private constructor(visuals: THREE.Object3D[]) {
+  private constructor(visuals: THREE.Object3D[], colliders: RAPIER.Collider[]) {
     this.visuals = visuals;
+    this.colliders = colliders;
   }
 
   static async create(
@@ -54,6 +56,7 @@ export class PhysicsPuzzle {
     const gltf = await loader.loadAsync(modelUrl);
     const scale = options.scale ?? board.scale;
     const visuals: THREE.Object3D[] = [];
+    const colliders: RAPIER.Collider[] = [];
 
     for (const placement of options.placements) {
       const instance = gltf.scene.clone();
@@ -87,13 +90,36 @@ export class PhysicsPuzzle {
       board.visual.add(instance);
       visuals.push(instance);
 
-      addBoardBodyColliders(RAPIER, world, board.body, instance, {
-        colliderMode: options.colliderMode ?? "auto",
-        flatnessThreshold: options.flatnessThreshold,
-        excludeObjectNames: options.excludeColliderObjectNames,
-      });
+      colliders.push(
+        ...addBoardBodyColliders(RAPIER, world, board.body, instance, {
+          colliderMode: options.colliderMode ?? "auto",
+          flatnessThreshold: options.flatnessThreshold,
+          excludeObjectNames: options.excludeColliderObjectNames,
+        })
+      );
     }
 
-    return new PhysicsPuzzle(visuals);
+    return new PhysicsPuzzle(visuals, colliders);
+  }
+
+  getColliders(): readonly RAPIER.Collider[] {
+    return this.colliders;
+  }
+
+  setCollidersEnabled(enabled: boolean) {
+    for (const collider of this.colliders) {
+      collider.setEnabled(enabled);
+    }
+  }
+
+  setVisible(visible: boolean) {
+    for (const visual of this.visuals) {
+      visual.visible = visible;
+    }
+  }
+
+  setEnabled(enabled: boolean) {
+    this.setVisible(enabled);
+    this.setCollidersEnabled(enabled);
   }
 }
