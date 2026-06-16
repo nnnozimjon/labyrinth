@@ -29,6 +29,7 @@ import {
   Level3GiftBox,
 } from "../entities/board";
 import { PhysicsHolesLevel2, PhysicsHolesLevel3, PhysicsGateHole } from "../entities/holes";
+import { BoostPad } from "../entities/boost-pad";
 import { createHolesLevel3DebugUI } from "../entities/holes/holes-level3-debug";
 import {
   SAND_WATCH_MATERIAL_OVERRIDES,
@@ -385,6 +386,27 @@ export class Game {
       enabled: DEBUG_HOLES_LEVEL3_UI,
     });
 
+    const boostPadLevel3A = await BoostPad.create(boardLevel3.visual, {
+      textureUrl: textures.boostArrow,
+      position: new THREE.Vector3(0, 0, -2),
+      rotationY: Math.PI * 1,
+      impulseStrength: -1.2,
+    });
+    const boostPadLevel3B = await BoostPad.create(boardLevel3.visual, {
+      textureUrl: textures.boostArrow,
+      position: new THREE.Vector3(2.2, 0, -1.8),
+      rotationY: -Math.PI * 1.2,
+      impulseStrength: -1.2,
+    });
+
+    const boostPadsLevel3 = [boostPadLevel3A, boostPadLevel3B];
+    for (const boostPad of boostPadsLevel3) {
+      levelManager.registerLevelObject(3, boostPad.visual);
+      for (const helper of boostPad.getDebugHelpers()) {
+        levelManager.registerDebugHelper(3, helper);
+      }
+    }
+
     const puzzleLevel1 = await PhysicsPuzzle.create(
       RAPIER,
       world,
@@ -463,14 +485,21 @@ export class Game {
       .filter((fan): fan is PuzzleFanRotation => fan !== null);
 
     const levelContents = new Map<number, LevelContent>([
-      [1, { board, puzzle: puzzleLevel1, holes: null, fans: puzzleFansLevel1 }],
-      [2, { board: boardLevel2, puzzle: puzzleLevel2, holes: holesLevel2, fans: puzzleFansLevel2 }],
+      [1, { board, puzzle: puzzleLevel1, holes: null, fans: puzzleFansLevel1, boostPads: [] }],
+      [2, {
+        board: boardLevel2,
+        puzzle: puzzleLevel2,
+        holes: holesLevel2,
+        fans: puzzleFansLevel2,
+        boostPads: [],
+      }],
       [3, {
         board: boardLevel3,
         puzzle: puzzleLevel3,
         holes: holesLevel3,
         fans: puzzleFansLevel3,
         giftBox: giftBoxLevel3,
+        boostPads: boostPadsLevel3,
       }],
     ]);
 
@@ -503,10 +532,16 @@ export class Game {
       onActivate: () => {
         holesLevel3.setActive(true);
         giftBoxLevel3.setActive(true);
+        for (const boostPad of boostPadsLevel3) {
+          boostPad.setActive(true);
+        }
       },
       onDeactivate: () => {
         holesLevel3.setActive(false);
         giftBoxLevel3.setActive(false);
+        for (const boostPad of boostPadsLevel3) {
+          boostPad.setActive(false);
+        }
       },
     });
 

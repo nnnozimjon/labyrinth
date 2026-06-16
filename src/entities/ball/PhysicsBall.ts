@@ -121,6 +121,18 @@ export class PhysicsBall {
     this.body.wakeUp();
   }
 
+  /** Applies an impulse along a normalized direction (optionally with upward lift). */
+  applyImpulse(direction: THREE.Vector3, strength: number, lift = 0) {
+    const impulse = {
+      x: direction.x * strength,
+      y: direction.y * strength + lift,
+      z: direction.z * strength,
+    };
+
+    this.body.applyImpulse(impulse, true);
+    this.body.wakeUp();
+  }
+
   syncFromPhysics(fallThreshold = -5) {
     const position = this.body.translation();
 

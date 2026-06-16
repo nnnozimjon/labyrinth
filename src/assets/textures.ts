@@ -10,4 +10,5 @@ export const textures = {
   level2: "/textures/level-2.png",
   level3: "/textures/level-3.png",
   boxCover: "/textures/box-cover.png",
+  boostArrow: "/textures/boost-arrow.png",
 } as const;

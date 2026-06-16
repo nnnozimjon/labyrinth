@@ -195,6 +195,8 @@ export class PhysicsBoard implements BoardAnchor {
   setOpacity(opacity: number) {
     this.visual.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
+      if (child.userData.boostPad) return;
+
       const materials = Array.isArray(child.material)
         ? child.material
         : [child.material];

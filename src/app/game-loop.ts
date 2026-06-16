@@ -180,6 +180,13 @@ export function startGameLoop(ctx: GameLoopContext) {
       if (activeHoles?.isActive && !ctx.gateHole.isNear) {
         activeHoles.update(delta, ctx.ball);
       }
+
+      const boostPads = ctx.getLevelContent(ctx.levelManager.getCurrentLevel()).boostPads;
+      for (const boostPad of boostPads) {
+        if (!boostPad.isRemoved) {
+          boostPad.update(delta, ctx.ball);
+        }
+      }
     }
 
     if (ctx.lossPending.value && !ctx.ballFrozen.value && !ctx.giftPauseActive.value) {
