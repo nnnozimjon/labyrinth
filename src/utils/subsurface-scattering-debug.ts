@@ -3,7 +3,7 @@ import GUI from "lil-gui";
 import {
   shininessFromRoughness,
   type SubsurfaceScatteringOptions,
-} from "./subsurfaceScattering";
+} from "./subsurface-scattering";
 
 type SssUniforms = {
   diffuse: { value: THREE.Color };

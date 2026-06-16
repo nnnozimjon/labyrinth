@@ -7,16 +7,16 @@ import {
   placeOnBoardSurface,
   prepareGltfMaterials,
   type BoardColliderMode,
-} from "./physicsUtils";
+} from "../../physics/collider-utils";
 import {
   applyMaterialOverrides,
   type MaterialOverrideMap,
-} from "./materialUtils";
+} from "../../utils/material-utils";
 import {
   applyModelTexture,
   pickModelTextureOptions,
   type ModelTextureOptions,
-} from "./textureUtils";
+} from "../../utils/texture-utils";
 
 export type PuzzlePlacement = {
   position: { x: number; y?: number; z: number };

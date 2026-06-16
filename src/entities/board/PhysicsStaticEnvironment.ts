@@ -7,7 +7,7 @@ import {
   prepareGltfMaterials,
   restObjectBottomAtY,
   type BoardColliderMode,
-} from "./physicsUtils";
+} from "../../physics/collider-utils";
 import {
   applyMaterialTexturesToModel,
   applyMeshTexturesToModel,
@@ -16,14 +16,14 @@ import {
   type MaterialTextureMap,
   type MeshTextureMap,
   type ModelTextureOptions,
-} from "./textureUtils";
+} from "../../utils/texture-utils";
 import {
   applyMaterialColorsToModel,
   applyMaterialOverrides,
   type MaterialColorMap,
   type MaterialOverrideMap,
   type MeshColorMap,
-} from "./materialUtils";
+} from "../../utils/material-utils";
 
 export type StaticEnvironmentOptions = {
   scale?: number;

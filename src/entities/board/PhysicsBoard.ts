@@ -8,12 +8,12 @@ import {
   isMostlyFlat,
   prepareGltfMaterials,
   type ObjectBounds,
-} from "./physicsUtils";
+} from "../../physics/collider-utils";
 import {
   applyModelTexture,
   pickModelTextureOptions,
   type ModelTextureOptions,
-} from "./textureUtils";
+} from "../../utils/texture-utils";
 
 export type PhysicsBoardOptions = {
   /** Uniform scale applied to the model before bounds and colliders are computed. */

@@ -1,35 +1,31 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import type { PhysicsBoard } from "./PhysicsBoard";
-import type { PhysicsBall } from "./PhysicsBall";
-import { prepareGltfMaterials } from "./physicsUtils";
+import type { PhysicsBoard } from "../board/PhysicsBoard";
+import type { PhysicsBall } from "../ball/PhysicsBall";
+import { prepareGltfMaterials } from "../../physics/collider-utils";
+import type { HoleLossTriggers, HolePosition } from "./holes-types";
 
 const loader = new GLTFLoader();
 
 const DEBUG_HOLE_TRIGGERS = true;
 
-const DETECTION_RADIUS = 0.3;
+export const HOLE_DETECTION_RADIUS = 0.3;
 const TRIGGER_HEIGHT = 0.01;
 
-export type HolePosition = {
-  x: number;
-  z: number;
-};
-
+/** Level 3 hole trigger positions — update when layout is finalized. */
 const DEFAULT_HOLE_POSITIONS: HolePosition[] = [
-  { x: -2.21, z: 2.42 },
-  { x: 2.08, z: -0.14 },
-  { x: -2.21, z: -0.15 },
-  { x: -2.21, z: -2.49 },
-  { x: 2.08, z: -2.49 },
+  { x: 2.37, z: 3.95 },
+  { x: -2.2, z: 3.96 },
+  { x: -2.2, z: 0.08 },
+  { x: 2.37, z: -3.7 },
 ];
 
-export type PhysicsHolesOptions = {
+export type PhysicsHolesLevel3Options = {
   holePositions?: HolePosition[];
 };
 
 const HOLE_Y = -0.1;
-const HOLES_MODEL_Y_OFFSET = 0  ;
+const HOLES_MODEL_Y_OFFSET = 0;
 
 const HOLE_MATERIAL = new THREE.MeshStandardMaterial({
   color: 0xff1100,
@@ -54,7 +50,8 @@ type HoleTrigger = {
   centerWorld: THREE.Vector3;
 };
 
-export class PhysicsHoles {
+export class PhysicsHolesLevel3 implements HoleLossTriggers {
+  private readonly boardVisual: THREE.Object3D;
   private readonly meshes: THREE.Mesh[];
   private readonly triggers: HoleTrigger[];
 
@@ -63,16 +60,44 @@ export class PhysicsHoles {
   private active = false;
   private onLossCallback: (() => void) | null = null;
 
-  private constructor(meshes: THREE.Mesh[], triggers: HoleTrigger[]) {
+  private constructor(
+    boardVisual: THREE.Object3D,
+    meshes: THREE.Mesh[],
+    triggers: HoleTrigger[]
+  ) {
+    this.boardVisual = boardVisual;
     this.meshes = meshes;
     this.triggers = triggers;
+  }
+
+  private createTriggerMesh(x: number, z: number): HoleTrigger {
+    const debugMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(
+        HOLE_DETECTION_RADIUS,
+        HOLE_DETECTION_RADIUS,
+        TRIGGER_HEIGHT,
+        48
+      ),
+      DEBUG_TRIGGER_MATERIAL.clone()
+    );
+
+    debugMesh.position.set(x, HOLE_Y, z);
+    debugMesh.visible = DEBUG_HOLE_TRIGGERS;
+    debugMesh.name = `debug-hole-trigger-level3-${this.triggers.length}`;
+
+    this.boardVisual.add(debugMesh);
+
+    return {
+      debugMesh,
+      centerWorld: new THREE.Vector3(),
+    };
   }
 
   static async create(
     board: PhysicsBoard,
     modelUrl: string,
-    options: PhysicsHolesOptions = {}
-  ): Promise<PhysicsHoles> {
+    options: PhysicsHolesLevel3Options = {}
+  ): Promise<PhysicsHolesLevel3> {
     const holePositions = options.holePositions ?? DEFAULT_HOLE_POSITIONS;
     const gltf = await loader.loadAsync(modelUrl);
     const model = gltf.scene.clone();
@@ -98,38 +123,53 @@ export class PhysicsHoles {
     });
 
     const triggers: HoleTrigger[] = [];
+    const instance = new PhysicsHolesLevel3(board.visual, meshes, triggers);
 
     for (const hole of holePositions) {
-      const debugMesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(
-          DETECTION_RADIUS,
-          DETECTION_RADIUS,
-          TRIGGER_HEIGHT,
-          48
-        ),
-        DEBUG_TRIGGER_MATERIAL.clone()
-      );
-
-      debugMesh.position.set(hole.x, HOLE_Y, hole.z);
-      debugMesh.visible = DEBUG_HOLE_TRIGGERS;
-      debugMesh.name = "debug-hole-trigger";
-
-      board.visual.add(debugMesh);
-
-      triggers.push({
-        debugMesh,
-        centerWorld: new THREE.Vector3(),
-      });
+      triggers.push(instance.createTriggerMesh(hole.x, hole.z));
     }
 
-    return new PhysicsHoles(meshes, triggers);
+    return instance;
   }
 
   get isActive(): boolean {
     return this.active;
   }
 
-  /** Debug cylinder helpers used for hole trigger visualization. */
+  getTriggerCount(): number {
+    return this.triggers.length;
+  }
+
+  getPositions(): HolePosition[] {
+    return this.triggers.map((trigger) => ({
+      x: trigger.debugMesh.position.x,
+      z: trigger.debugMesh.position.z,
+    }));
+  }
+
+  addTrigger(x = 0, z = 0): number {
+    const trigger = this.createTriggerMesh(x, z);
+    this.triggers.push(trigger);
+    trigger.debugMesh.visible = this.active && DEBUG_HOLE_TRIGGERS;
+    return this.triggers.length - 1;
+  }
+
+  setTriggerPosition(index: number, x: number, z: number): void {
+    const trigger = this.triggers[index];
+    if (!trigger) return;
+    trigger.debugMesh.position.set(x, HOLE_Y, z);
+  }
+
+  removeTrigger(index: number): void {
+    const trigger = this.triggers[index];
+    if (!trigger) return;
+
+    this.boardVisual.remove(trigger.debugMesh);
+    trigger.debugMesh.geometry.dispose();
+    (trigger.debugMesh.material as THREE.Material).dispose();
+    this.triggers.splice(index, 1);
+  }
+
   getDebugHelpers(): THREE.Object3D[] {
     return this.triggers.map((trigger) => trigger.debugMesh);
   }
@@ -186,12 +226,7 @@ export class PhysicsHoles {
       const dz = ballPosition.z - trigger.centerWorld.z;
 
       const distanceXZ = Math.sqrt(dx * dx + dz * dz);
-
-      /**
-       * Exact visual cylinder radius.
-       * No BALL_RADIUS added, because that makes trigger fire too early.
-       */
-      const isTouchingVisibleCylinder = distanceXZ <= DETECTION_RADIUS;
+      const isTouchingVisibleCylinder = distanceXZ <= HOLE_DETECTION_RADIUS;
 
       if (isTouchingVisibleCylinder) {
         this.triggered = true;
@@ -200,12 +235,12 @@ export class PhysicsHoles {
         mat.color.set(0xffff00);
         mat.opacity = 0.8;
 
-        console.log("[PhysicsHoles] LOSS TRIGGERED BY VISIBLE CYLINDER", {
+        console.log("[PhysicsHolesLevel3] LOSS TRIGGERED BY VISIBLE CYLINDER", {
           triggerIndex: i,
           ballPosition,
           triggerCenter: trigger.centerWorld,
           distanceXZ,
-          detectionRadius: DETECTION_RADIUS,
+          detectionRadius: HOLE_DETECTION_RADIUS,
         });
 
         this.onLossCallback?.();
@@ -213,4 +248,4 @@ export class PhysicsHoles {
       }
     }
   }
-} 
+}

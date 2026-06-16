@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import GUI from "lil-gui";
-import type { BulbLights } from "./sceneLighting";
+import type { BulbLights } from "./scene-lighting";
 
 const DECIMALS = 3;
 

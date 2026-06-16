@@ -5,7 +5,7 @@ import {
   syncRotatingBoardCollider,
   type BoardColliderMode,
   type RotatingBoardCollider,
-} from "./physicsUtils";
+} from "../../physics/collider-utils";
 
 /** Continuous fan spin speed in radians per second. */
 export const FAN_ROTATION_SPEED = 1.2;

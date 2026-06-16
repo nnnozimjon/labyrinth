@@ -2,7 +2,7 @@ import * as THREE from "three";
 import {
   createSubsurfaceScatteringMaterial,
   type SubsurfaceScatteringOptions,
-} from "./subsurfaceScattering";
+} from "./subsurface-scattering";
 
 export type MaterialOverride = {
   color?: THREE.ColorRepresentation;

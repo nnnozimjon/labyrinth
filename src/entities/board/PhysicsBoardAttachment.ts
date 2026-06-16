@@ -6,16 +6,16 @@ import {
   addBoardBodyColliders,
   prepareGltfMaterials,
   type BoardColliderMode,
-} from "./physicsUtils";
+} from "../../physics/collider-utils";
 import {
   applyModelTexture,
   pickModelTextureOptions,
   type ModelTextureOptions,
-} from "./textureUtils";
+} from "../../utils/texture-utils";
 import {
   applyMaterialOverrides,
   type MaterialOverrideMap,
-} from "./materialUtils";
+} from "../../utils/material-utils";
 
 export type PhysicsBoardAttachmentOptions = {
   /** Should match the board scale so the model aligns with the ground. */

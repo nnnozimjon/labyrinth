@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import type { BoardAnchor } from "./PhysicsBoard";
-import type { PhysicsBall } from "./PhysicsBall";
-import { prepareGltfMaterials } from "./physicsUtils";
+import type { BoardAnchor } from "../board/PhysicsBoard";
+import type { PhysicsBall } from "../ball/PhysicsBall";
+import { prepareGltfMaterials } from "../../physics/collider-utils";
 
 const loader = new GLTFLoader();
 

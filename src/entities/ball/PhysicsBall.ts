@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import type RAPIER from "@dimforge/rapier3d-compat";
-import { prepareGltfMaterials } from "./physicsUtils";
+import RAPIER from "@dimforge/rapier3d-compat";
+import { prepareGltfMaterials } from "../../physics/collider-utils";
 
 export type PhysicsBallOptions = {
   /** Override the auto-calculated sphere collider radius. */
@@ -98,6 +98,26 @@ export class PhysicsBall {
     );
     this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    this.body.wakeUp();
+  }
+
+  /** Stops the ball in place — used during gift pickup cinematic. */
+  freeze() {
+    const position = this.body.translation();
+    const rotation = this.body.rotation();
+
+    this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    this.body.setBodyType(RAPIER.RigidBodyType.KinematicPositionBased, true);
+    this.body.setNextKinematicTranslation(position);
+    this.body.setNextKinematicRotation(rotation);
+
+    this.visual.position.set(position.x, position.y, position.z);
+    this.visual.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+  }
+
+  unfreeze() {
+    this.body.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
     this.body.wakeUp();
   }
 

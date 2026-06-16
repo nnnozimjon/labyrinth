@@ -3,7 +3,7 @@ import type RAPIER from "@dimforge/rapier3d-compat";
 import {
   collectCollidersOnBody,
   setRigidBodyPhysicsEnabled,
-} from "./physicsUtils";
+} from "../physics/collider-utils";
 
 /** `userData` key used to tag objects with their level number. */
 export const LEVEL_USER_DATA_KEY = "level";
