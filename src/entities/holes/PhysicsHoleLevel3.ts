@@ -7,7 +7,7 @@ import type { HoleLossTriggers, HolePosition } from "./holes-types";
 
 const loader = new GLTFLoader();
 
-const DEBUG_HOLE_TRIGGERS = true;
+const DEBUG_HOLE_TRIGGERS = false;
 
 export const HOLE_DETECTION_RADIUS = 0.3;
 const TRIGGER_HEIGHT = 0.01;

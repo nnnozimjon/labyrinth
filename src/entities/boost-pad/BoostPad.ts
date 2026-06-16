@@ -8,9 +8,9 @@ import {
 } from "./boost-pad-material";
 
 const DEFAULT_IMPULSE_STRENGTH = 5;
-const DEFAULT_TRIGGER_RADIUS = 0.5;
+const DEFAULT_TRIGGER_RADIUS = 0.42;
 /** World-space diameter of the circular pad (matches texture circle). */
-const DEFAULT_PAD_DIAMETER = 1.05;
+const DEFAULT_PAD_DIAMETER = 0.82;
 const DEFAULT_COOLDOWN = 0.4;
 const TRIGGER_HEIGHT = 0.02;
 const DEBUG_BOOST_TRIGGER = false;

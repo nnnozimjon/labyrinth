@@ -28,6 +28,7 @@ import type { PhysicsDebugRenderer } from "../physics/physics-debug";
 import type { LightDebugRenderer } from "../physics/light-debug";
 import type { createCameraDebugMonitor } from "../utils/camera-debug";
 import type { CameraTransition } from "../core/camera-transition";
+import type { LevelCalendarDisplay } from "../levels/LevelCalendarDisplay";
 
 export type SharedBoardAnchor = BoardAnchor & {
   setRotation(quaternion: THREE.Quaternion): void;
@@ -63,6 +64,7 @@ export type GameLoopContext = {
   lossPending: { value: boolean };
   giftPauseActive: { value: boolean };
   giftCameraTransition: CameraTransition;
+  levelCalendarDisplay: LevelCalendarDisplay | null;
   finishLevelTransition: () => void;
   startLevelTransition: (fromLevel: number, toLevel: number) => void;
 };
@@ -158,6 +160,12 @@ export function startGameLoop(ctx: GameLoopContext) {
 
       animatePuzzleRise(to.puzzle.visuals, puzzleT);
       to.board.setOpacity(easeOutCubic(boardT));
+
+      ctx.levelCalendarDisplay?.setTransition(
+        ctx.transitionFromLevel.value,
+        ctx.transitionToLevel.value,
+        boardT
+      );
 
       if (puzzleT >= 1 && boardT >= 1) {
         animatePuzzleOffset(to.puzzle.visuals, 0);

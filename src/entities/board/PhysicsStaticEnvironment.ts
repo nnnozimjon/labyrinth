@@ -46,6 +46,8 @@ export type StaticEnvironmentOptions = {
   materialOverrides?: MaterialOverrideMap;
   /** Per-material texture URLs matched by GLB material name. */
   materialTextures?: MaterialTextureMap;
+  /** Per-texture-url load overrides (e.g. flipY for one image only). */
+  textureUrlOverrides?: Record<string, Partial<ModelTextureOptions>>;
   /** Per-mesh texture URLs matched by GLB mesh/object name. */
   meshTextures?: MeshTextureMap;
   /** Solid colors by GLB material name (clears texture maps). */
@@ -94,12 +96,18 @@ export class PhysicsStaticEnvironment {
       await applyMaterialTexturesToModel(
         model,
         options.materialTextures,
-        options
+        options,
+        options.textureUrlOverrides
       );
     }
 
     if (options.meshTextures) {
-      await applyMeshTexturesToModel(model, options.meshTextures, options);
+      await applyMeshTexturesToModel(
+        model,
+        options.meshTextures,
+        options,
+        options.textureUrlOverrides
+      );
     }
 
     if (

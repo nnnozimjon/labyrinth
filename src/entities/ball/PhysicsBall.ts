@@ -99,6 +99,13 @@ export class PhysicsBall {
     this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     this.body.wakeUp();
+
+    this.visual.position.copy(this.startPosition);
+    this.visual.quaternion.identity();
+  }
+
+  setStartPosition(position: THREE.Vector3 | { x: number; y: number; z: number }) {
+    this.startPosition.set(position.x, position.y, position.z);
   }
 
   /** Stops the ball in place — used during gift pickup cinematic. */

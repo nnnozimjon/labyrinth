@@ -7,7 +7,7 @@ import type { HoleLossTriggers, HolePosition } from "./holes-types";
 
 const loader = new GLTFLoader();
 
-const DEBUG_HOLE_TRIGGERS = true;
+const DEBUG_HOLE_TRIGGERS = false;
 
 const DETECTION_RADIUS = 0.3;
 const TRIGGER_HEIGHT = 0.01;
@@ -42,7 +42,7 @@ const DEBUG_TRIGGER_MATERIAL = new THREE.MeshBasicMaterial({
   transparent: true,
   opacity: 0.35,
   depthWrite: false,
-  wireframe: true,
+  wireframe: false,
 });
 
 type HoleTrigger = {

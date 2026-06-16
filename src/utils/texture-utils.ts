@@ -127,14 +127,15 @@ function pickTextureLoadOptions(
 
 async function loadTexturesByUrl(
   urlMap: Record<string, string>,
-  loadOptions: TextureLoadOptions
+  loadOptions: TextureLoadOptions,
+  urlOverrides: Record<string, TextureLoadOptions> = {}
 ): Promise<Map<string, THREE.Texture>> {
   const uniqueUrls = [...new Set(Object.values(urlMap))];
   const loaded = new Map<string, THREE.Texture>();
 
   await Promise.all(
     uniqueUrls.map(async (url) => {
-      loaded.set(url, await loadModelTexture(url, loadOptions));
+      loaded.set(url, await loadModelTexture(url, { ...loadOptions, ...urlOverrides[url] }));
     })
   );
 
@@ -167,12 +168,14 @@ export function applyTextureToModel(
 export async function applyMaterialTexturesToModel(
   root: THREE.Object3D,
   materialTextures: MaterialTextureMap,
-  options: Partial<ModelTextureOptions> = {}
+  options: Partial<ModelTextureOptions> = {},
+  textureUrlOverrides: Record<string, TextureLoadOptions> = {}
 ): Promise<void> {
   const { color, roughness, metalness } = options;
   const textureByUrl = await loadTexturesByUrl(
     materialTextures,
-    pickTextureLoadOptions(options)
+    pickTextureLoadOptions(options),
+    textureUrlOverrides
   );
   const materialOverrides = { color, roughness, metalness };
 
@@ -204,12 +207,14 @@ export async function applyMaterialTexturesToModel(
 export async function applyMeshTexturesToModel(
   root: THREE.Object3D,
   meshTextures: MeshTextureMap,
-  options: Partial<ModelTextureOptions> = {}
+  options: Partial<ModelTextureOptions> = {},
+  textureUrlOverrides: Record<string, TextureLoadOptions> = {}
 ): Promise<void> {
   const { color, roughness, metalness } = options;
   const textureByUrl = await loadTexturesByUrl(
     meshTextures,
-    pickTextureLoadOptions(options)
+    pickTextureLoadOptions(options),
+    textureUrlOverrides
   );
   const materialOverrides = { color, roughness, metalness };
 

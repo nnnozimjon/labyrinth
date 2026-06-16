@@ -4,6 +4,7 @@ import {
   collectCollidersOnBody,
   setRigidBodyPhysicsEnabled,
 } from "../physics/collider-utils";
+import { SHOW_DEBUG_HELPERS } from "../utils/constants";
 
 /** `userData` key used to tag objects with their level number. */
 export const LEVEL_USER_DATA_KEY = "level";
@@ -217,7 +218,7 @@ export class LevelManager {
       level.group.visible = isActive;
 
       for (const helper of level.debugHelpers) {
-        helper.visible = isActive;
+        helper.visible = isActive && SHOW_DEBUG_HELPERS;
       }
     }
   }
@@ -235,7 +236,7 @@ export class LevelManager {
     }
 
     for (const helper of level.debugHelpers) {
-      helper.visible = state.visuals;
+      helper.visible = state.visuals && SHOW_DEBUG_HELPERS;
     }
 
     for (const body of level.bodies) {

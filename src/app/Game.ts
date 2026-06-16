@@ -11,6 +11,12 @@ import { PhysicsDebugRenderer } from "../physics/physics-debug";
 import { LightDebugRenderer } from "../physics/light-debug";
 import { LevelManager } from "../levels/LevelManager";
 import { registerLevelContent } from "../levels/level-config";
+import {
+  getBallStartPosition,
+  LEVEL_BALL_START_POSITIONS,
+} from "../levels/ball-spawn";
+import { createBallSpawnLevel3DebugUI } from "../levels/ball-spawn-level3-debug";
+import { LevelCalendarDisplay } from "../levels/LevelCalendarDisplay";
 import type { LevelContent, LevelTransitionPhase } from "../levels/level-types";
 import {
   preparePuzzleDropAnimation,
@@ -56,9 +62,12 @@ import {
   BOARD_SCALE,
   DEBUG_BULB_LIGHT,
   DEBUG_CAMERA_TRANSFORM,
+  DEBUG_BALL_SPAWN_LEVEL3_UI,
   DEBUG_HOLES_LEVEL3_UI,
+  DEBUG_LOG_SCENE_HIERARCHY,
   DEBUG_SSS_UI,
   DEBUG_START_LEVEL,
+  ENABLE_ORBIT_CONTROLS,
   GROUND_SCALE,
   PUZZLE_INTRO_START_Y,
   PUZZLE_PLACEMENTS,
@@ -272,7 +281,7 @@ export class Game {
       board
     );
 
-    await PhysicsStaticEnvironment.create(
+    const levelCalendarEnv = await PhysicsStaticEnvironment.create(
       RAPIER,
       world,
       staticWorldGroup,
@@ -287,6 +296,9 @@ export class Game {
           "level-2": textures.level2,
           "level-3": textures.level3,
         },
+        textureUrlOverrides: {
+          [textures.level2]: { flipY: false },
+        },
         materialColors: LEVEL_CALENDAR_MATERIAL_COLORS,
         maxAnisotropy: this.renderer.capabilities.getMaxAnisotropy(),
         repeat: { x: 1, y: 1 },
@@ -300,6 +312,8 @@ export class Game {
       },
       board
     );
+    const levelCalendarDisplay = LevelCalendarDisplay.attach(levelCalendarEnv.visual);
+    levelCalendarDisplay?.setLevel(DEBUG_START_LEVEL);
 
     await PhysicsStaticEnvironment.create(
       RAPIER,
@@ -374,7 +388,7 @@ export class Game {
     const holesLevel3 = await PhysicsHolesLevel3.create(boardLevel3, models.vfxHolesLevel3);
 
     const giftBoxLevel3 = await Level3GiftBox.create(boardLevel3, models.giftBox, {
-      position: new THREE.Vector3(0.1, 0.335, 0),
+      position: new THREE.Vector3(2, 0.335, 0.3),
     });
     levelManager.registerLevelObject(3, giftBoxLevel3.visual);
     for (const helper of giftBoxLevel3.getDebugHelpers()) {
@@ -388,7 +402,7 @@ export class Game {
 
     const boostPadLevel3A = await BoostPad.create(boardLevel3.visual, {
       textureUrl: textures.boostArrow,
-      position: new THREE.Vector3(0, 0, -2),
+      position: new THREE.Vector3(-0.2, 0, -2),
       rotationY: Math.PI * 1,
       impulseStrength: -1.2,
     });
@@ -580,8 +594,20 @@ export class Game {
 
     const ball = await PhysicsBall.create(RAPIER, world, this.scene, models.ball, {
       colliderRadius: BALL_COLLIDER_RADIUS,
-      startPosition: new THREE.Vector3(0, 0.3, 2.8),
+      startPosition: getBallStartPosition(DEBUG_START_LEVEL),
     });
+
+    createBallSpawnLevel3DebugUI({
+      ball,
+      spawn: LEVEL_BALL_START_POSITIONS[3],
+      enabled: DEBUG_BALL_SPAWN_LEVEL3_UI,
+    });
+
+    const applyBallSpawnForLevel = (level: number) => {
+      ball.setStartPosition(getBallStartPosition(level));
+      ball.reset();
+      ball.visual.visible = true;
+    };
 
     const ballFrozen = { value: false };
     const lossTimer = { value: 0 };
@@ -595,9 +621,9 @@ export class Game {
     };
 
     const giftCameraState: CameraState = {
-      position: new THREE.Vector3(0.226, 1.65, -2.43),
-      rotation: new THREE.Euler(-2.45, -0.027, -3.119),
-      target: new THREE.Vector3(0.278, 0.415, -0.939),
+      position: new THREE.Vector3(1.89, 1.538, -1.673),
+      rotation: new THREE.Euler(-2.524, 0.003, 3.139),
+      target: new THREE.Vector3(1.885, 0.718, -0.517),
     };
 
     const giftCameraTransition = new CameraTransition(1.5);
@@ -642,7 +668,7 @@ export class Game {
           giftPauseActive.value = false;
           ball.autoResetEnabled = true;
           ball.unfreeze();
-          this.controls.enabled = true;
+          this.controls.enabled = ENABLE_ORBIT_CONTROLS;
         }
       );
     });
@@ -662,8 +688,7 @@ export class Game {
       lossPending.value = false;
       lossTimer.value = 0;
       ball.autoResetEnabled = true;
-      ball.reset();
-      ball.visual.visible = true;
+      applyBallSpawnForLevel(levelManager.getCurrentLevel());
       ballFrozen.value = false;
     });
 
@@ -671,9 +696,9 @@ export class Game {
 
     const finishLevelTransition = () => {
       levelManager.setCurrentLevel(transitionToLevel.value);
+      levelCalendarDisplay?.setLevel(transitionToLevel.value);
       ball.autoResetEnabled = true;
-      ball.reset();
-      ball.visual.visible = true;
+      applyBallSpawnForLevel(transitionToLevel.value);
       ballFrozen.value = false;
       transitionPhase.value = "none";
       gateHole.reset();
@@ -726,7 +751,9 @@ export class Game {
       : null;
     cameraDebug?.enable();
 
-    logSceneHierarchy(this.scene, "root");
+    if (DEBUG_LOG_SCENE_HIERARCHY) {
+      logSceneHierarchy(this.scene, "root");
+    }
 
     setupResize(this.camera, this.renderer);
 
@@ -760,6 +787,7 @@ export class Game {
       lossPending,
       giftPauseActive,
       giftCameraTransition,
+      levelCalendarDisplay,
       finishLevelTransition,
       startLevelTransition,
     });
