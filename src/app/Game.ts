@@ -55,6 +55,7 @@ import {
 } from "../utils/scene-lighting";
 import { VirtualJoystick } from "../input/joystick";
 import { createCameraDebugMonitor } from "../utils/camera-debug";
+import { isMobileDevice } from "../utils/device";
 import { createBulbLightDebugUI } from "../utils/bulb-light-debug";
 import { logSceneHierarchy } from "../physics/collider-utils";
 import {
@@ -220,7 +221,9 @@ export class Game {
       {
         scale: BOARD_SCALE,
         alignWithBoard: true,
-        position: { x: 1, z: 0.3, y: -0.6 },
+        position: isMobileDevice()
+          ? { x: -3, z: -2, y: -0.6 }
+          : { x: 1, z: 0.3, y: -0.6 },
         enableColliders: false,
         textureUrl: textures.bookCover,
         maxAnisotropy: this.renderer.capabilities.getMaxAnisotropy(),
@@ -241,7 +244,9 @@ export class Game {
       {
         scale: BOARD_SCALE,
         alignWithBoard: true,
-        position: { x: -0.5, z: 0.5, y: -0.6 },
+        position: isMobileDevice()
+          ? { x: 2, z: -1, y: -0.6 }
+          : { x: -0.5, z: 0.5, y: -0.6 },
         enableColliders: false,
         textureUrl: textures.tickets,
         maxAnisotropy: this.renderer.capabilities.getMaxAnisotropy(),
@@ -372,9 +377,15 @@ export class Game {
       board
     );
 
-    this.camera.position.set(0.37, 8.582, -7.819);
-    this.camera.rotation.set(-2.274, 0.021, 3.117);
-    this.controls.target.set(0.15, 0.44, -0.913);
+    if (isMobileDevice()) {
+      this.camera.position.set(-0.205, 11.725, -10.482);
+      this.camera.rotation.set(-2.274, -0.024, -3.113);
+      this.controls.target.set(0.15, 0.44, -0.913);
+    } else {
+      this.camera.position.set(0.37, 8.582, -7.819);
+      this.camera.rotation.set(-2.274, 0.021, 3.117);
+      this.controls.target.set(0.15, 0.44, -0.913);
+    }
     this.controls.update();
 
     await PhysicsStaticEnvironment.create(

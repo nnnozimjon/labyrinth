@@ -92,12 +92,65 @@ function injectStyles(): void {
     }
 
     @media (max-width: 720px) {
+      #${OVERLAY_ID} {
+        justify-content: flex-start;
+        overflow-y: auto;
+      }
+
       #${OVERLAY_ID} .loading-posters {
-        display: none;
+        display: contents;
+      }
+
+      #${OVERLAY_ID} .loading-poster--left {
+        order: 1;
+        position: relative !important;
+        left: auto !important;
+        right: auto !important;
+        top: auto !important;
+        width: min(220px, 62vw) !important;
+        margin: clamp(8px, 2vh, 16px) auto 0;
+        align-self: center;
+        transform: rotate(-4deg);
+        animation: loadingPosterFloatLeftMobile 4.5s ease-in-out infinite;
+      }
+
+      #${OVERLAY_ID} .loading-poster--right {
+        order: 3;
+        position: relative !important;
+        left: auto !important;
+        right: auto !important;
+        top: auto !important;
+        width: min(220px, 62vw) !important;
+        margin: clamp(12px, 2vh, 20px) auto;
+        align-self: center;
+        transform: rotate(3.5deg);
+        animation: loadingPosterFloatRightMobile 4.8s ease-in-out infinite;
+      }
+
+      #${OVERLAY_ID} .loading-center {
+        order: 2;
+        flex: 0 1 auto;
+        justify-content: flex-start;
+        padding-top: clamp(8px, 1.5vh, 16px);
+      }
+
+      #${OVERLAY_ID} .loading-legal {
+        order: 4;
+        margin-top: auto;
       }
 
       #${OVERLAY_ID} .loading-bottom-tagline {
         font-size: clamp(0.72rem, 3.2vw, 0.9rem) !important;
+      }
+
+      @keyframes loadingPosterFloatLeftMobile {
+        0%, 100% { transform: rotate(-4deg) translateY(0); }
+        50% { transform: rotate(-2.5deg) translateY(-6px); }
+      }
+
+      @keyframes loadingPosterFloatRightMobile {
+        0%, 100% { transform: rotate(3.5deg) translateY(0); }
+        50% { transform: rotate(5deg) translateY(-7px); }
       }
     }
 
@@ -190,6 +243,7 @@ export function createLoadingOverlay() {
   });
 
   const center = document.createElement("main");
+  center.className = "loading-center";
   Object.assign(center.style, {
     position: "relative",
     zIndex: "2",
@@ -371,6 +425,7 @@ export function createLoadingOverlay() {
   center.append(title, subtitle, bottomText, progressWrap);
 
   const legal = document.createElement("div");
+  legal.className = "loading-legal";
   legal.textContent = "Реклама. 18+ ООО «Фортуна»";
   Object.assign(legal.style, {
     position: "relative",
