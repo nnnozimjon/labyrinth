@@ -1,10 +1,9 @@
 import { FORMULA55_UI } from "./formula55-ui";
-import { createSvgIcon } from "./icons";
 
 export function createStartOverlay(_level = 1) {
   const style = document.createElement("style");
   style.textContent = `
-    @import url('https://fonts.googleapis.com/css2?family=Russo+One&display=swap');
+    @import url("https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap");
 
     #start-overlay {
       --f55-yellow: ${FORMULA55_UI.yellow};
@@ -17,20 +16,12 @@ export function createStartOverlay(_level = 1) {
       animation: startOverlayFade 360ms ease-out forwards;
     }
 
-    #start-overlay.start-overlay--show .start-header {
-      animation: startHeaderDrop 460ms ease-out forwards;
-    }
-
     #start-overlay.start-overlay--show .start-hero {
       animation: startHeroPop 520ms cubic-bezier(.2,1.2,.2,1) forwards;
     }
 
     #start-overlay.start-overlay--show .start-footer {
       animation: startFooterUp 520ms ease-out forwards;
-    }
-
-    .start-icon-btn:active {
-      transform: translateY(1px) skewX(-8deg) !important;
     }
 
     #start-game-btn {
@@ -53,11 +44,6 @@ export function createStartOverlay(_level = 1) {
     @keyframes startOverlayFade {
       from { opacity: 0; }
       to { opacity: 1; }
-    }
-
-    @keyframes startHeaderDrop {
-      from { opacity: 0; transform: translateY(-18px); }
-      to { opacity: 1; transform: translateY(0); }
     }
 
     @keyframes startHeroPop {
@@ -157,171 +143,6 @@ export function createStartOverlay(_level = 1) {
     userSelect: "none",
     lineHeight: "0.8",
   });
-
-  const header = document.createElement("header");
-  header.className = "start-header";
-  Object.assign(header.style, {
-    position: "relative",
-    zIndex: "2",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "clamp(16px, 3vw, 30px) clamp(20px, 4vw, 44px)",
-    flexShrink: "0",
-  });
-
-  const logo = document.createElement("div");
-  Object.assign(logo.style, {
-    position: "relative",
-    isolation: "isolate",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "10px 18px 10px 16px",
-    border: "1px solid rgba(255,221,38,0.9)",
-    borderRadius: "14px",
-    overflow: "hidden",
-    background: `
-      linear-gradient(135deg, rgba(18,18,18,0.94), rgba(0,0,0,0.74)),
-      repeating-linear-gradient(135deg, rgba(255,221,38,0.12) 0 7px, transparent 7px 16px)
-    `,
-    boxShadow: `
-      0 14px 34px rgba(0,0,0,0.48),
-      0 0 22px rgba(255,221,38,0.18),
-      inset 0 1px 0 rgba(255,255,255,0.12)
-    `,
-    transform: "skewX(-10deg)",
-  });
-
-  const logoText = document.createElement("span");
-  logoText.textContent = "FORMULA";
-  Object.assign(logoText.style, {
-    color: "#ffffff",
-    fontSize: "clamp(1.1rem, 2.8vw, 1.7rem)",
-    fontWeight: "950",
-    fontStyle: "italic",
-    letterSpacing: "0.04em",
-    lineHeight: "1",
-    transform: "skewX(10deg)",
-    textShadow: "0 2px 10px rgba(0,0,0,0.55)",
-  });
-
-  const logoBadge = document.createElement("span");
-  logoBadge.textContent = "55";
-  Object.assign(logoBadge.style, {
-    color: FORMULA55_UI.yellow,
-    fontSize: "clamp(1.15rem, 3vw, 1.85rem)",
-    fontWeight: "1000",
-    fontStyle: "italic",
-    lineHeight: "1",
-    transform: "skewX(10deg)",
-    textShadow: "0 0 16px rgba(255,221,38,0.45)",
-  });
-
-  logo.append(logoText, logoBadge);
-
-  const actions = document.createElement("div");
-  Object.assign(actions.style, {
-    display: "flex",
-    gap: "14px",
-    alignItems: "center",
-  });
-
-  function makeHeaderIconButton(label: string, path: string): HTMLButtonElement {
-    const btn = document.createElement("button");
-    btn.className = "start-icon-btn";
-    btn.type = "button";
-    btn.setAttribute("aria-label", label);
-
-    const defaultBackground = `
-      linear-gradient(145deg, rgba(22,22,22,0.92), rgba(0,0,0,0.72)),
-      repeating-linear-gradient(135deg, rgba(255,221,38,0.1) 0 6px, transparent 6px 14px)
-    `;
-    const defaultBoxShadow = `
-      0 12px 26px rgba(0,0,0,0.46),
-      0 0 18px rgba(255,221,38,0.16),
-      inset 0 1px 0 rgba(255,255,255,0.12)
-    `;
-    const hoverBoxShadow = `
-      0 16px 34px rgba(0,0,0,0.55),
-      0 0 26px rgba(255,221,38,0.32),
-      inset 0 1px 0 rgba(255,255,255,0.18)
-    `;
-
-    Object.assign(btn.style, {
-      position: "relative",
-      isolation: "isolate",
-      width: "56px",
-      height: "56px",
-      borderRadius: "14px",
-      border: `1px solid ${FORMULA55_UI.yellow}`,
-      overflow: "hidden",
-      background: defaultBackground,
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      boxShadow: defaultBoxShadow,
-      transition:
-        "transform 150ms ease, box-shadow 150ms ease, background 150ms ease",
-      transform: "skewX(-8deg)",
-    });
-
-    const iconWrap = document.createElement("span");
-    Object.assign(iconWrap.style, {
-      display: "inline-flex",
-      transform: "skewX(8deg)",
-    });
-
-    const icon = createSvgIcon(path, "0 0 24 24", FORMULA55_UI.yellow);
-    const iconPath = icon.querySelector("path");
-    Object.assign(icon.style, {
-      width: "28px",
-      height: "28px",
-      filter: "drop-shadow(0 0 8px rgba(255,221,38,0.35))",
-      transition: "filter 150ms ease",
-    });
-
-    iconWrap.appendChild(icon);
-    btn.append(iconWrap);
-
-    btn.addEventListener("mouseenter", () => {
-      if (iconPath) iconPath.setAttribute("fill", FORMULA55_UI.textDark);
-      Object.assign(icon.style, { filter: "none" });
-      Object.assign(btn.style, {
-        transform: "translateY(-2px) skewX(-8deg)",
-        background: FORMULA55_UI.yellow,
-        boxShadow: hoverBoxShadow,
-      });
-    });
-
-    btn.addEventListener("mouseleave", () => {
-      if (iconPath) iconPath.setAttribute("fill", FORMULA55_UI.yellow);
-      Object.assign(icon.style, {
-        filter: "drop-shadow(0 0 8px rgba(255,221,38,0.35))",
-      });
-      Object.assign(btn.style, {
-        transform: "skewX(-8deg)",
-        background: defaultBackground,
-        boxShadow: defaultBoxShadow,
-      });
-    });
-
-    return btn;
-  }
-
-  const menuBtn = makeHeaderIconButton(
-    "Menu",
-    "M4 7h16v2H4V7zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"
-  );
-
-  const soundBtn = makeHeaderIconButton(
-    "Sound",
-    "M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 0 0-2.15-3.82v7.63A4.48 4.48 0 0 0 16.5 12zm2.82-2.82A7.48 7.48 0 0 1 20 12a7.48 7.48 0 0 1-1.68 4.82l-1.42-1.42A5.48 5.48 0 0 0 17.5 12a5.48 5.48 0 0 0-1.5-3.8l1.42-1.42z"
-  );
-
-  actions.append(menuBtn, soundBtn);
-  header.append(logo, actions);
 
   const center = document.createElement("main");
   center.className = "start-hero";
@@ -506,7 +327,7 @@ export function createStartOverlay(_level = 1) {
     width: "min(82vw, 560px)",
     padding: "clamp(18px, 4vw, 28px) clamp(12px, 3vw, 20px)",
     color: "#ffffff",
-    fontFamily: '"Russo One", "Segoe UI", system-ui, sans-serif',
+    fontFamily: '"Great Vibes", cursive',
     fontSize: "clamp(1.85rem, 7.5vw, 3.6rem)",
     fontWeight: "400",
     letterSpacing: "0.04em",
@@ -632,7 +453,7 @@ export function createStartOverlay(_level = 1) {
 
   footer.append(heroTagline, startBtn);
 
-  overlay.append(ambient, carbon, watermark, header, center, footer);
+  overlay.append(ambient, carbon, watermark, center, footer);
   document.body.appendChild(overlay);
 
   let visible = true;

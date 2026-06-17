@@ -76,6 +76,7 @@ import {
   TOTAL_LEVELS,
 } from "../utils/constants";
 import {
+  createGameHud,
   createWinOverlay,
   createGiftOverlay,
   createStartOverlay,
@@ -762,6 +763,7 @@ export class Game {
 
     setupResize(this.camera, this.renderer);
 
+    createGameHud();
     const startOverlay = createStartOverlay(DEBUG_START_LEVEL);
     joystick.element.style.display = "none";
     ball.freeze();
