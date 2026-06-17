@@ -75,7 +75,12 @@ import {
   SHOW_LIGHT_HELPERS,
   TOTAL_LEVELS,
 } from "../utils/constants";
-import { createLossOverlay, createWinOverlay, createGiftOverlay } from "./overlays";
+import {
+  createWinOverlay,
+  createGiftOverlay,
+  createStartOverlay,
+} from "../ui/overlays";
+import { FailEffect } from "../ui/FailEffect";
 import { CameraTransition } from "../core/camera-transition";
 import type { CameraState } from "../core/camera-transition";
 import { startGameLoop } from "./game-loop";
@@ -462,7 +467,8 @@ export class Game {
 
     preparePuzzleDropAnimation(puzzleLevel1.visuals, PUZZLE_INTRO_START_Y);
 
-    const puzzleIntroActive = { value: DEBUG_START_LEVEL === 1 };
+    const startScreenActive = { value: true };
+    const puzzleIntroActive = { value: false };
     const puzzleIntroTime = { value: 0 };
 
     const puzzleFansLevel1 = puzzleLevel1.visuals
@@ -560,9 +566,6 @@ export class Game {
     });
 
     levelManager.setCurrentLevel(DEBUG_START_LEVEL);
-    if (DEBUG_START_LEVEL !== 1) {
-      puzzleIntroActive.value = false;
-    }
     if (DEBUG_START_LEVEL === 2) {
       getLevelContent(2).board.setOpacity(1);
     }
@@ -673,7 +676,18 @@ export class Game {
       );
     });
 
-    const lossOverlay = createLossOverlay();
+    const failEffect = new FailEffect();
+    const lossEffectPlaying = { value: false };
+
+    const resetAfterLoss = () => {
+      getLevelContent(levelManager.getCurrentLevel()).holes?.reset();
+      lossPending.value = false;
+      lossTimer.value = 0;
+      ball.autoResetEnabled = true;
+      applyBallSpawnForLevel(levelManager.getCurrentLevel());
+      ballFrozen.value = false;
+    };
+
     for (const [levelId, content] of levelContents) {
       content.holes?.onLoss(() => {
         if (lossPending.value || ballFrozen.value || levelManager.getCurrentLevel() !== levelId) return;
@@ -682,15 +696,6 @@ export class Game {
         ball.autoResetEnabled = false;
       });
     }
-    lossOverlay.onRetry(() => {
-      lossOverlay.hide();
-      getLevelContent(levelManager.getCurrentLevel()).holes?.reset();
-      lossPending.value = false;
-      lossTimer.value = 0;
-      ball.autoResetEnabled = true;
-      applyBallSpawnForLevel(levelManager.getCurrentLevel());
-      ballFrozen.value = false;
-    });
 
     const winOverlay = createWinOverlay();
 
@@ -723,7 +728,7 @@ export class Game {
       lossTimer.value = 0;
       ballFrozen.value = true;
       ball.visual.visible = false;
-      winOverlay.show();
+      winOverlay.show(current);
     });
 
     winOverlay.onNextLevel(() => {
@@ -757,6 +762,22 @@ export class Game {
 
     setupResize(this.camera, this.renderer);
 
+    const startOverlay = createStartOverlay(DEBUG_START_LEVEL);
+    joystick.element.style.display = "none";
+    ball.freeze();
+
+    startOverlay.onStart(() => {
+      startOverlay.hide();
+      startScreenActive.value = false;
+      joystick.element.style.display = "";
+      ball.unfreeze();
+
+      if (DEBUG_START_LEVEL === 1) {
+        puzzleIntroActive.value = true;
+        puzzleIntroTime.value = 0;
+      }
+    });
+
     startGameLoop({
       scene: this.scene,
       camera: this.camera,
@@ -773,7 +794,9 @@ export class Game {
       physicsDebug,
       lightDebug,
       cameraDebug,
-      lossOverlay,
+      failEffect,
+      resetAfterLoss,
+      lossEffectPlaying,
       puzzleLevel1,
       puzzleIntroActive,
       puzzleIntroTime,
@@ -790,6 +813,7 @@ export class Game {
       levelCalendarDisplay,
       finishLevelTransition,
       startLevelTransition,
+      startScreenActive,
     });
   }
 }

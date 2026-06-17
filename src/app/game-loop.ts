@@ -29,6 +29,7 @@ import type { LightDebugRenderer } from "../physics/light-debug";
 import type { createCameraDebugMonitor } from "../utils/camera-debug";
 import type { CameraTransition } from "../core/camera-transition";
 import type { LevelCalendarDisplay } from "../levels/LevelCalendarDisplay";
+import type { FailEffect } from "../ui/FailEffect";
 
 export type SharedBoardAnchor = BoardAnchor & {
   setRotation(quaternion: THREE.Quaternion): void;
@@ -50,7 +51,9 @@ export type GameLoopContext = {
   physicsDebug: PhysicsDebugRenderer | null;
   lightDebug: LightDebugRenderer | null;
   cameraDebug: ReturnType<typeof createCameraDebugMonitor> | null;
-  lossOverlay: { show: () => void };
+  failEffect: FailEffect;
+  resetAfterLoss: () => void;
+  lossEffectPlaying: { value: boolean };
   puzzleLevel1: LevelContent["puzzle"];
   puzzleIntroActive: { value: boolean };
   puzzleIntroTime: { value: number };
@@ -67,6 +70,7 @@ export type GameLoopContext = {
   levelCalendarDisplay: LevelCalendarDisplay | null;
   finishLevelTransition: () => void;
   startLevelTransition: (fromLevel: number, toLevel: number) => void;
+  startScreenActive: { value: boolean };
 };
 
 export function startGameLoop(ctx: GameLoopContext) {
@@ -84,6 +88,7 @@ export function startGameLoop(ctx: GameLoopContext) {
     const lerpFactor = 1 - Math.exp(-TILT_SMOOTHING * delta);
 
     const gameplayInputLocked =
+      ctx.startScreenActive.value ||
       ctx.giftPauseActive.value ||
       ctx.ballFrozen.value ||
       ctx.giftCameraTransition.isActive();
@@ -118,7 +123,7 @@ export function startGameLoop(ctx: GameLoopContext) {
       giftBox.update(delta, ctx.ball);
     }
 
-    if (ctx.puzzleIntroActive.value) {
+    if (ctx.puzzleIntroActive.value && !ctx.startScreenActive.value) {
       ctx.puzzleIntroTime.value += delta;
       const t = Math.min(ctx.puzzleIntroTime.value / PUZZLE_INTRO_DURATION, 1);
       animatePuzzleRise(ctx.puzzleLevel1.visuals, t);
@@ -174,15 +179,17 @@ export function startGameLoop(ctx: GameLoopContext) {
       }
     }
 
-    ctx.world.timestep = delta;
-    ctx.world.step();
+    if (!ctx.startScreenActive.value) {
+      ctx.world.timestep = delta;
+      ctx.world.step();
+    }
 
     ctx.physicsDebug?.update();
     ctx.lightDebug?.update();
 
     ctx.giftCameraTransition.update(delta, ctx.camera, ctx.controls);
 
-    if (!ctx.giftPauseActive.value && !ctx.ballFrozen.value) {
+    if (!ctx.startScreenActive.value && !ctx.giftPauseActive.value && !ctx.ballFrozen.value) {
       ctx.gateHole.update(delta, ctx.ball);
       const activeHoles = ctx.getLevelContent(ctx.levelManager.getCurrentLevel()).holes;
       if (activeHoles?.isActive && !ctx.gateHole.isNear) {
@@ -199,11 +206,15 @@ export function startGameLoop(ctx: GameLoopContext) {
 
     if (ctx.lossPending.value && !ctx.ballFrozen.value && !ctx.giftPauseActive.value) {
       ctx.lossTimer.value += delta;
-      if (ctx.lossTimer.value >= 1) {
+      if (ctx.lossTimer.value >= 1 && !ctx.lossEffectPlaying.value) {
         ctx.lossPending.value = false;
+        ctx.lossEffectPlaying.value = true;
         ctx.ballFrozen.value = true;
         ctx.ball.visual.visible = false;
-        ctx.lossOverlay.show();
+        void ctx.failEffect.play().then(() => {
+          ctx.resetAfterLoss();
+          ctx.lossEffectPlaying.value = false;
+        });
       }
     }
 
