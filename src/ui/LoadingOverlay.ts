@@ -135,82 +135,6 @@ function createMagazineImage(
   return img;
 }
 
-function createGiftBox(): HTMLDivElement {
-  const wrap = document.createElement("div");
-  wrap.className = "loading-gift-wrap";
-  Object.assign(wrap.style, {
-    position: "relative",
-    width: "clamp(88px, 18vw, 128px)",
-    height: "clamp(88px, 18vw, 128px)",
-    margin: "clamp(12px, 2vh, 20px) 0",
-  });
-
-  const glow = document.createElement("div");
-  glow.className = "loading-glow-ring";
-  Object.assign(glow.style, {
-    position: "absolute",
-    left: "50%",
-    top: "50%",
-    width: "140%",
-    height: "140%",
-    borderRadius: "50%",
-    border: "3px solid rgba(231,179,31,0.65)",
-    background: "radial-gradient(circle, rgba(231,179,31,0.22) 0%, transparent 68%)",
-    pointerEvents: "none",
-  });
-
-  const box = document.createElement("div");
-  Object.assign(box.style, {
-    position: "relative",
-    width: "100%",
-    height: "100%",
-    borderRadius: "10px",
-    background: `
-      linear-gradient(145deg, #1a1410 0%, #0d0a08 55%, #1f1812 100%),
-      repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 8px)
-    `,
-    border: `3px solid ${FORMULA55_UI.yellow}`,
-    boxShadow: `
-      0 18px 40px rgba(0,0,0,0.55),
-      0 0 28px rgba(231,179,31,0.25),
-      inset 0 2px 0 rgba(255,255,255,0.08)
-    `,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "clamp(2.4rem, 8vw, 3.4rem)",
-    lineHeight: "1",
-  });
-  box.textContent = "🎁";
-
-  const ribbonV = document.createElement("div");
-  Object.assign(ribbonV.style, {
-    position: "absolute",
-    left: "50%",
-    top: "0",
-    width: "18%",
-    height: "100%",
-    transform: "translateX(-50%)",
-    background: `linear-gradient(180deg, ${FORMULA55_UI.yellow}, #c99a1a)`,
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35)",
-  });
-
-  const ribbonH = document.createElement("div");
-  Object.assign(ribbonH.style, {
-    position: "absolute",
-    left: "0",
-    top: "38%",
-    width: "100%",
-    height: "18%",
-    background: `linear-gradient(90deg, ${FORMULA55_UI.yellow}, #c99a1a)`,
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35)",
-  });
-
-  box.append(ribbonV, ribbonH);
-  wrap.append(glow, box);
-  return wrap;
-}
-
 export function createLoadingOverlay() {
   document.getElementById(OVERLAY_ID)?.remove();
   injectStyles();
@@ -336,8 +260,6 @@ export function createLoadingOverlay() {
   });
 
   posters.append(posterLeft, posterRight);
-
-  // const giftBox = createGiftBox();
 
   const bottomText = document.createElement("div");
   Object.assign(bottomText.style, {

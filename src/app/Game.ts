@@ -83,6 +83,7 @@ import {
 } from "../ui/overlays";
 import { FailEffect } from "../ui/FailEffect";
 import { createLoadingOverlay } from "../ui/LoadingOverlay";
+import { createCampaignInfoOverlay } from "../ui/CampaignInfoOverlay";
 import { CameraTransition } from "../core/camera-transition";
 import type { CameraState } from "../core/camera-transition";
 import { startGameLoop } from "./game-loop";
@@ -784,7 +785,9 @@ export class Game {
 
     setupResize(this.camera, this.renderer);
 
-    createGameHud();
+    const campaignOverlay = createCampaignInfoOverlay();
+    const hud = createGameHud();
+    hud.menuButton.addEventListener("click", () => campaignOverlay.show());
     const startOverlay = createStartOverlay(DEBUG_START_LEVEL);
     joystick.element.style.display = "none";
     ball.freeze();
