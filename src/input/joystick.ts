@@ -1,6 +1,6 @@
-const BASE_SIZE = 120;
-const STICK_SIZE = 48;
-const MAX_DEFLECTION = 40;
+const BASE_SIZE = 144;
+const STICK_SIZE = 58;
+const MAX_DEFLECTION = 48;
 
 export class VirtualJoystick {
   readonly element: HTMLDivElement;

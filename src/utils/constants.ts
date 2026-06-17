@@ -22,13 +22,13 @@ export const SHOW_LIGHT_HELPERS = false;
 export const SHOW_DEBUG_HELPERS = false;
 
 /** When true, enables OrbitControls camera orbit / pan / zoom. */
-export const ENABLE_ORBIT_CONTROLS = false;
+export const ENABLE_ORBIT_CONTROLS = true;
 
 /** When true, logs the scene hierarchy to the console on startup. */
 export const DEBUG_LOG_SCENE_HIERARCHY = false;
 
 /** When true, logs camera transform changes and enables debug keyboard shortcuts. */
-export const DEBUG_CAMERA_TRANSFORM = false;
+export const DEBUG_CAMERA_TRANSFORM = true;
 
 /** When true, shows a lil-gui panel to tweak board wall subsurface scattering. */
 export const DEBUG_SSS_UI = false;
