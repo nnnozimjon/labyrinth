@@ -82,6 +82,7 @@ import {
   createStartOverlay,
 } from "../ui/overlays";
 import { FailEffect } from "../ui/FailEffect";
+import { createLoadingOverlay } from "../ui/LoadingOverlay";
 import { CameraTransition } from "../core/camera-transition";
 import type { CameraState } from "../core/camera-transition";
 import { startGameLoop } from "./game-loop";
@@ -108,6 +109,11 @@ export class Game {
   }
 
   private async init() {
+    const loading = createLoadingOverlay();
+    loading.show();
+    loading.setProgress(0);
+    loading.setStatus("Загрузка игры...");
+
     const { RAPIER, world } = await createPhysicsWorld();
     const joystick = new VirtualJoystick();
 
@@ -125,6 +131,8 @@ export class Game {
     levelManager.createLevel(1, tiltingBoardGroup);
     levelManager.createLevel(2, tiltingBoardGroup);
     levelManager.createLevel(3, tiltingBoardGroup);
+
+    loading.setStatus("Загрузка моделей...");
 
     await PhysicsStaticEnvironment.create(
       RAPIER,
@@ -198,6 +206,9 @@ export class Game {
       scale: BOARD_SCALE,
       position: { y: -0.2 },
     });
+
+    loading.setProgress(35);
+    loading.setStatus("Загрузка текстур...");
 
     await PhysicsStaticEnvironment.create(
       RAPIER,
@@ -384,6 +395,9 @@ export class Game {
       textureUrl: textures.fabric2,
     });
 
+    loading.setProgress(65);
+    loading.setStatus("Подготовка физики...");
+
     await PhysicsGate.create(RAPIER, world, sharedBoard, models.gate, {
       scale: BOARD_SCALE,
     });
@@ -467,6 +481,8 @@ export class Game {
     );
 
     preparePuzzleDropAnimation(puzzleLevel1.visuals, PUZZLE_INTRO_START_Y);
+
+    loading.setProgress(85);
 
     const startScreenActive = { value: true };
     const puzzleIntroActive = { value: false };
@@ -600,6 +616,11 @@ export class Game {
       colliderRadius: BALL_COLLIDER_RADIUS,
       startPosition: getBallStartPosition(DEBUG_START_LEVEL),
     });
+
+    loading.setProgress(100);
+    loading.setStatus("Почти готово...");
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    loading.hide();
 
     createBallSpawnLevel3DebugUI({
       ball,
