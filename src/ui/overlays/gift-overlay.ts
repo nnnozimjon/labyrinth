@@ -1,5 +1,8 @@
 import { FORMULA55_UI } from "./formula55-ui";
 
+const FORMULA55_REF_LINK = "https://formula55.tj/campaigns";
+const BONUS_AMOUNT_TJS = 100;
+
 export function createGiftOverlay() {
   const style = document.createElement("style");
   style.textContent = `
@@ -15,7 +18,8 @@ export function createGiftOverlay() {
       animation: giftPrizePop 520ms cubic-bezier(.2,1.35,.2,1) forwards;
     }
 
-    #gift-ok-btn:hover {
+    #gift-ok-btn:hover,
+    #gift-bonus-btn:hover {
       filter: brightness(1.08);
       transform: translateY(-2px) skewX(-8deg);
       box-shadow:
@@ -24,7 +28,8 @@ export function createGiftOverlay() {
         inset 0 2px 0 rgba(255,255,255,0.45) !important;
     }
 
-    #gift-ok-btn:active {
+    #gift-ok-btn:active,
+    #gift-bonus-btn:active {
       transform: translateY(1px) skewX(-8deg);
     }
 
@@ -114,7 +119,7 @@ export function createGiftOverlay() {
   });
 
   const sub = document.createElement("p");
-  sub.textContent = "Внутри мы спрятали подарок от FORMULA55";
+  sub.textContent = "Вы нашли подарок. Заберите бонус или продолжите игру.";
   Object.assign(sub.style, {
     color: "rgba(255,255,255,0.76)",
     fontSize: "clamp(0.95rem, 2.8vw, 1.15rem)",
@@ -148,71 +153,111 @@ export function createGiftOverlay() {
   Object.assign(prize.style, {
     fontSize: "clamp(5rem, 18vw, 9rem)",
     lineHeight: "1",
-    filter: "drop-shadow(0 18px 24px rgba(0,0,0,0.45)) drop-shadow(0 0 24px rgba(255,221,38,0.35))",
+    filter:
+      "drop-shadow(0 18px 24px rgba(0,0,0,0.45)) drop-shadow(0 0 24px rgba(255,221,38,0.35))",
   });
 
   prizeWrap.appendChild(prize);
 
-  const btn = document.createElement("button");
-  btn.id = "gift-ok-btn";
-  btn.type = "button";
-  Object.assign(btn.style, {
-    position: "relative",
-    isolation: "isolate",
-    display: "inline-flex",
-    alignItems: "center",
+  const actions = document.createElement("div");
+  Object.assign(actions.style, {
+    display: "flex",
     justifyContent: "center",
-    gap: "12px",
-    width: "min(100%, 420px)",
-    height: "64px",
-    border: "1px solid rgba(255,221,38,0.9)",
-    borderRadius: "16px",
-    overflow: "hidden",
-    cursor: "pointer",
-    color: FORMULA55_UI.textDark,
-    fontSize: "clamp(0.95rem, 2.7vw, 1.15rem)",
-    fontWeight: "1000",
-    letterSpacing: "0.12em",
-    fontFamily: "inherit",
-    background: `linear-gradient(135deg, ${FORMULA55_UI.yellow}, #d49b0a)`,
-    transform: "skewX(-8deg)",
-    transition: "filter 160ms ease, box-shadow 160ms ease, transform 120ms ease",
-    boxShadow: `
-      0 14px 30px rgba(0,0,0,0.45),
-      0 0 26px rgba(255,221,38,0.26),
-      inset 0 2px 0 rgba(255,255,255,0.36)
-    `,
+    alignItems: "center",
+    gap: "16px",
+    flexWrap: "wrap",
   });
 
-  const btnShine = document.createElement("span");
-  Object.assign(btnShine.style, {
-    position: "absolute",
-    inset: "0",
-    zIndex: "-1",
-    background: `
-      linear-gradient(110deg, transparent 0%, transparent 30%, rgba(255,255,255,0.4) 45%, transparent 58%),
-      repeating-linear-gradient(135deg, rgba(0,0,0,0.12) 0 8px, transparent 8px 18px)
-    `,
-    opacity: "0.5",
+  const createButton = (
+    id: string,
+    text: string,
+    variant: "primary" | "secondary"
+  ) => {
+    const btn = document.createElement("button");
+    btn.id = id;
+    btn.type = "button";
+
+    Object.assign(btn.style, {
+      position: "relative",
+      isolation: "isolate",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "min(100%, 260px)",
+      height: "64px",
+      border: "1px solid rgba(255,221,38,0.9)",
+      borderRadius: "16px",
+      overflow: "hidden",
+      cursor: "pointer",
+      color:
+        variant === "primary" ? FORMULA55_UI.textDark : FORMULA55_UI.yellow,
+      fontSize: "clamp(0.85rem, 2.3vw, 1rem)",
+      fontWeight: "1000",
+      letterSpacing: "0.08em",
+      fontFamily: "inherit",
+      background:
+        variant === "primary"
+          ? `linear-gradient(135deg, ${FORMULA55_UI.yellow}, #d49b0a)`
+          : `linear-gradient(145deg, rgba(20,20,20,0.95), rgba(0,0,0,0.85))`,
+      transform: "skewX(-8deg)",
+      transition: "filter 160ms ease, box-shadow 160ms ease, transform 120ms ease",
+      boxShadow:
+        variant === "primary"
+          ? `
+            0 14px 30px rgba(0,0,0,0.45),
+            0 0 26px rgba(255,221,38,0.26),
+            inset 0 2px 0 rgba(255,255,255,0.36)
+          `
+          : `
+            0 14px 30px rgba(0,0,0,0.45),
+            inset 0 1px 0 rgba(255,255,255,0.08)
+          `,
+    });
+
+    const shine = document.createElement("span");
+    Object.assign(shine.style, {
+      position: "absolute",
+      inset: "0",
+      zIndex: "-1",
+      background:
+        variant === "primary"
+          ? `
+            linear-gradient(110deg, transparent 0%, transparent 30%, rgba(255,255,255,0.4) 45%, transparent 58%),
+            repeating-linear-gradient(135deg, rgba(0,0,0,0.12) 0 8px, transparent 8px 18px)
+          `
+          : `
+            linear-gradient(110deg, transparent 0%, transparent 30%, rgba(255,221,38,0.14) 45%, transparent 58%),
+            repeating-linear-gradient(135deg, rgba(255,221,38,0.08) 0 8px, transparent 8px 18px)
+          `,
+      opacity: "0.5",
+    });
+
+    const label = document.createElement("span");
+    label.textContent = text;
+    Object.assign(label.style, {
+      transform: "skewX(8deg)",
+      whiteSpace: "nowrap",
+    });
+
+    btn.append(shine, label);
+    return btn;
+  };
+
+  const bonusBtn = createButton(
+    "gift-bonus-btn",
+    `ЗАБРАТЬ БОНУС ${BONUS_AMOUNT_TJS} TJS`,
+    "primary"
+  );
+
+  const continueBtn = createButton("gift-ok-btn", "ПРОДОЛЖИТЬ", "secondary");
+
+  bonusBtn.addEventListener("click", () => {
+    window.open(FORMULA55_REF_LINK, "_blank", "noopener,noreferrer");
   });
 
-  const btnArrow = document.createElement("span");
-  btnArrow.textContent = "▶";
-  Object.assign(btnArrow.style, {
-    transform: "skewX(8deg)",
-    fontSize: "1.1em",
-    lineHeight: "1",
-  });
+  actions.append(bonusBtn, continueBtn);
 
-  const btnLabel = document.createElement("span");
-  btnLabel.textContent = "ЗАБРАТЬ ПОДАРОК";
-  Object.assign(btnLabel.style, {
-    transform: "skewX(8deg)",
-  });
-
-  btn.append(btnShine, btnArrow, btnLabel);
-
-  card.append(watermark, title, sub, prizeWrap, btn);
+  card.append(watermark, title, sub, prizeWrap, actions);
   overlay.appendChild(card);
   document.body.appendChild(overlay);
 
@@ -228,7 +273,7 @@ export function createGiftOverlay() {
       overlay.classList.remove("gift-overlay--show");
     },
     onOkay: (cb: () => void) => {
-      btn.addEventListener("click", cb);
+      continueBtn.addEventListener("click", cb);
     },
   };
 }
