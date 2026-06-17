@@ -84,6 +84,7 @@ import {
 import { FailEffect } from "../ui/FailEffect";
 import { createLoadingOverlay } from "../ui/LoadingOverlay";
 import { createCampaignInfoOverlay } from "../ui/CampaignInfoOverlay";
+import { createFinalWinOverlay } from "../ui/FinalWinOverlay";
 import { CameraTransition } from "../core/camera-transition";
 import type { CameraState } from "../core/camera-transition";
 import { startGameLoop } from "./game-loop";
@@ -570,6 +571,7 @@ export class Game {
       onActivate: () => {
         holesLevel3.setActive(true);
         giftBoxLevel3.setActive(true);
+        gateHole.setDetectionEnabled(true);
         for (const boostPad of boostPadsLevel3) {
           boostPad.setActive(true);
         }
@@ -721,6 +723,7 @@ export class Game {
     }
 
     const winOverlay = createWinOverlay();
+    const finalWinOverlay = createFinalWinOverlay();
 
     const finishLevelTransition = () => {
       levelManager.setCurrentLevel(transitionToLevel.value);
@@ -746,12 +749,19 @@ export class Game {
     gateHole.onWin(() => {
       if (ballFrozen.value || giftPauseActive.value || transitionPhase.value !== "none") return;
       const current = levelManager.getCurrentLevel();
-      if (current >= TOTAL_LEVELS) return;
       lossPending.value = false;
       lossTimer.value = 0;
       ballFrozen.value = true;
       ball.visual.visible = false;
-      winOverlay.show(current);
+
+      if (current === TOTAL_LEVELS) {
+        finalWinOverlay.show();
+        return;
+      }
+
+      if (current < TOTAL_LEVELS) {
+        winOverlay.show(current);
+      }
     });
 
     winOverlay.onNextLevel(() => {
@@ -761,6 +771,14 @@ export class Game {
       pendingNextLevel.value = current + 1;
       transitionPhase.value = "waiting";
       transitionTime.value = 0;
+    });
+
+    finalWinOverlay.onAlreadyClient(() => {
+      ball.visual.visible = true;
+      ballFrozen.value = false;
+      ball.autoResetEnabled = true;
+      applyBallSpawnForLevel(levelManager.getCurrentLevel());
+      gateHole.reset();
     });
 
     enableShadowsOnObject(staticWorldGroup);
