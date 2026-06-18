@@ -178,6 +178,7 @@ function createMagazineImage(
     position: "absolute",
     width: "min(330px, 36vw)",
     height: "auto",
+    aspectRatio: "1086 / 1448",
     borderRadius: "4px",
     boxShadow: "0 14px 32px rgba(0,0,0,0.45)",
     transformOrigin: "center center",
