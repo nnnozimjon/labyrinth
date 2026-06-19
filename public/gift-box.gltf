@@ -4,7 +4,9 @@
 		"version":"2.0"
 	},
 	"extensionsUsed":[
-		"KHR_draco_mesh_compression"
+		"KHR_draco_mesh_compression",
+		"KHR_materials_specular",
+		"KHR_materials_ior"
 	],
 	"extensionsRequired":[
 		"KHR_draco_mesh_compression"
@@ -14,69 +16,62 @@
 		{
 			"name":"Scene",
 			"nodes":[
-				3
+				0
 			]
 		}
 	],
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"defaultMaterial.001"
-		},
-		{
-			"children":[
-				0
+			"name":"gift",
+			"scale":[
+				0.11595287919044495,
+				0.11595287919044495,
+				0.11595287919044495
 			],
-			"name":"g"
-		},
-		{
-			"children":[
-				1
-			],
-			"name":"Collada visual scene group",
-			"rotation":[
-				0.70710688829422,
-				0,
-				0,
-				0.7071066498756409
-			]
-		},
-		{
-			"children":[
-				2
-			],
-			"name":"Sketchfab_model.019",
-			"rotation":[
-				-0.70710688829422,
-				0,
-				0,
-				0.7071066498756409
+			"translation":[
+				1.3368209600448608,
+				0.06346021592617035,
+				0.516846239566803
 			]
 		}
 	],
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"defaultMat",
-			"normalTexture":{
+			"emissiveFactor":[
+				0.30000001192092896,
+				0.30000001192092896,
+				0.30000001192092896
+			],
+			"emissiveTexture":{
 				"index":0
 			},
-			"occlusionTexture":{
-				"index":1
+			"extensions":{
+				"KHR_materials_specular":{
+					"specularColorFactor":[
+						0.0,
+						0.0,
+						0.0
+					]
+				},
+				"KHR_materials_ior":{
+					"ior":1000
+				}
 			},
+			"name":"Cube_gift.003",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
-					"index":2
-				},
-				"metallicRoughnessTexture":{
 					"index":1
-				}
+				},
+				"metallicFactor":0,
+				"roughnessFactor":0.9577051401138306
 			}
 		}
 	],
 	"meshes":[
 		{
-			"name":"defaultMaterial.001",
+			"name":"0",
 			"primitives":[
 				{
 					"attributes":{
@@ -109,65 +104,56 @@
 		{
 			"sampler":0,
 			"source":1
-		},
-		{
-			"sampler":0,
-			"source":2
 		}
 	],
 	"images":[
 		{
 			"mimeType":"image/webp",
-			"name":"Image_2",
-			"uri":"Image_2.webp"
+			"name":"Image_9",
+			"uri":"Image_9.webp"
 		},
 		{
 			"mimeType":"image/webp",
-			"name":"Image_1",
-			"uri":"Image_1.webp"
-		},
-		{
-			"mimeType":"image/webp",
-			"name":"Image_0",
-			"uri":"Image_0.webp"
+			"name":"Image_8",
+			"uri":"Image_8.webp"
 		}
 	],
 	"accessors":[
 		{
 			"componentType":5126,
-			"count":294,
+			"count":4696,
 			"max":[
-				1,
-				1,
-				1
+				0.2670767605304718,
+				0.218450129032135,
+				0.26512056589126587
 			],
 			"min":[
-				-1,
-				-1,
-				-1
+				-0.2698051929473877,
+				-0.3866899609565735,
+				-0.25465720891952515
 			],
 			"type":"VEC3"
 		},
 		{
 			"componentType":5126,
-			"count":294,
+			"count":4696,
 			"type":"VEC3"
 		},
 		{
 			"componentType":5126,
-			"count":294,
+			"count":4696,
 			"type":"VEC2"
 		},
 		{
 			"componentType":5123,
-			"count":1296,
+			"count":16326,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":2766,
+			"byteLength":29293,
 			"byteOffset":0
 		}
 	],
@@ -179,8 +165,8 @@
 	],
 	"buffers":[
 		{
-			"byteLength":2768,
-			"uri":"test-ball.bin"
+			"byteLength":29296,
+			"uri":"gift-box.bin"
 		}
 	]
 }
