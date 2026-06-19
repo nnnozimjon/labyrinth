@@ -179,7 +179,7 @@ export function startGameLoop(ctx: GameLoopContext) {
       }
     }
 
-    if (!ctx.startScreenActive.value && ctx.transitionPhase.value === "none") {
+    if (!ctx.startScreenActive.value) {
       ctx.world.timestep = delta;
       ctx.world.step();
     }
