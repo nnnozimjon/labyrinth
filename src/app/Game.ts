@@ -22,6 +22,11 @@ import {
   preparePuzzleDropAnimation,
   ensurePuzzleFinalY,
 } from "../levels/puzzle-animation";
+import {
+  clearSavedLevel,
+  resolveStartLevel,
+  saveLevel,
+} from "../levels/level-progress";
 import { PhysicsBall } from "../entities/ball";
 import {
   PhysicsBoard,
@@ -67,7 +72,6 @@ import {
   DEBUG_HOLES_LEVEL3_UI,
   DEBUG_LOG_SCENE_HIERARCHY,
   DEBUG_SSS_UI,
-  DEBUG_START_LEVEL,
   ENABLE_ORBIT_CONTROLS,
   GROUND_SCALE,
   PUZZLE_INTRO_START_Y,
@@ -112,6 +116,8 @@ export class Game {
   }
 
   private async init() {
+    const startLevel = resolveStartLevel();
+
     const loading = createLoadingOverlay();
     loading.show();
     loading.setProgress(0);
@@ -337,7 +343,7 @@ export class Game {
       board
     );
     const levelCalendarDisplay = LevelCalendarDisplay.attach(levelCalendarEnv.visual);
-    levelCalendarDisplay?.setLevel(DEBUG_START_LEVEL);
+    levelCalendarDisplay?.setLevel(startLevel);
 
     await PhysicsStaticEnvironment.create(
       RAPIER,
@@ -596,11 +602,11 @@ export class Game {
       },
     });
 
-    levelManager.setCurrentLevel(DEBUG_START_LEVEL);
-    if (DEBUG_START_LEVEL === 2) {
+    levelManager.setCurrentLevel(startLevel);
+    if (startLevel >= 2) {
       getLevelContent(2).board.setOpacity(1);
     }
-    if (DEBUG_START_LEVEL === 3) {
+    if (startLevel >= 3) {
       getLevelContent(3).board.setOpacity(1);
     }
 
@@ -628,7 +634,7 @@ export class Game {
 
     const ball = await PhysicsBall.create(RAPIER, world, this.scene, models.ball, {
       colliderRadius: BALL_COLLIDER_RADIUS,
-      startPosition: getBallStartPosition(DEBUG_START_LEVEL),
+      startPosition: getBallStartPosition(startLevel),
     });
 
     loading.setProgress(100);
@@ -739,6 +745,7 @@ export class Game {
     const finishLevelTransition = () => {
       levelManager.setCurrentLevel(transitionToLevel.value);
       levelCalendarDisplay?.setLevel(transitionToLevel.value);
+      saveLevel(transitionToLevel.value);
       ball.autoResetEnabled = true;
       applyBallSpawnForLevel(transitionToLevel.value);
       ballFrozen.value = false;
@@ -766,6 +773,7 @@ export class Game {
       ball.visual.visible = false;
 
       if (current === TOTAL_LEVELS) {
+        clearSavedLevel();
         finalWinOverlay.show();
         return;
       }
@@ -817,7 +825,7 @@ export class Game {
     const campaignOverlay = createCampaignInfoOverlay();
     const hud = createGameHud();
     hud.menuButton.addEventListener("click", () => campaignOverlay.show());
-    const startOverlay = createStartOverlay(DEBUG_START_LEVEL);
+    const startOverlay = createStartOverlay(startLevel);
     joystick.element.style.display = "none";
     ball.freeze();
 
@@ -826,8 +834,9 @@ export class Game {
       startScreenActive.value = false;
       joystick.element.style.display = "";
       ball.unfreeze();
+      saveLevel(startLevel);
 
-      if (DEBUG_START_LEVEL === 1) {
+      if (startLevel === 1) {
         puzzleIntroActive.value = true;
         puzzleIntroTime.value = 0;
       }
