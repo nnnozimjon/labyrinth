@@ -1,4 +1,5 @@
-import ballModelUrl from "../ball.glb?url";
+/** Compressed test asset (gltf + external bin) instead of ball.glb. */
+const ballModelUrl = "/test-ball.gltf";
 import boardLevel1ModelUrl from "../board-ground.glb?url";
 import puzzleLevel1ModelUrl from "../puzzles.glb?url";
 import boardLevel2ModelUrl from "../board-ground-level-2.glb?url";
@@ -9,17 +10,22 @@ import puzzleLevel3ModelUrl from "../level3-puzzle.glb?url";
 import vfxHolesLevel3ModelUrl from "../vfx-holes-level3.glb?url";
 import wallsModelUrl from "../board-walls.glb?url";
 import gateModelUrl from "../board-gate.glb?url";
-import stairsModelUrl from "../board-stairs.glb?url";
+/** Compressed test asset (gltf + external bin) instead of board-stairs.glb. */
+const stairsModelUrl = "/test-board-stairs.gltf";
 import groundModelUrl from "../ground.glb?url";
 import bookModelUrl from "../book.glb?url";
 import ticketModelUrl from "../ticket.glb?url";
-import lampModelUrl from "../lamp.glb?url";
-import cupPlateModelUrl from "../cup-plate.glb?url";
-import levelCalendarModelUrl from "../level-calendar.glb?url";
+/** Compressed test asset (gltf + external bin) instead of lamp.glb. */
+const lampModelUrl = "/test-lamp.gltf";
+/** Compressed test asset (gltf + external bin) instead of cup-plate.glb. */
+const cupPlateModelUrl = "/test-cup-plate.gltf";
+/** Compressed test asset (gltf + external bin) instead of level-calendar.glb. */
+const levelCalendarModelUrl = "/test-level-calendar.gltf";
 import boxModelUrl from "../box.glb?url";
 import sandWatchModelUrl from "../sand-watch.glb?url";
 import dicesModelUrl from "../dices.glb?url";
-import giftBoxModelUrl from "../gift-box.glb?url";
+/** Compressed test asset (gltf + external bin) instead of gift-box.glb. */
+const giftBoxModelUrl = "/test-gift.gltf";
 import vfxGateHoleModelUrl from "../gate-hole-vfx.glb?url";
 
 export const models = {
