@@ -2,6 +2,13 @@ const BASE_SIZE = 144;
 const STICK_SIZE = 58;
 const MAX_DEFLECTION = 48;
 
+const NO_SELECT_STYLE = {
+  userSelect: "none",
+  webkitUserSelect: "none",
+  webkitTouchCallout: "none",
+  webkitTapHighlightColor: "transparent",
+} as const;
+
 export class VirtualJoystick {
   readonly element: HTMLDivElement;
 
@@ -20,6 +27,7 @@ export class VirtualJoystick {
 
   constructor() {
     this.element = document.createElement("div");
+    this.element.id = "virtual-joystick";
     Object.assign(this.element.style, {
       position: "fixed",
       bottom: "40px",
@@ -28,8 +36,8 @@ export class VirtualJoystick {
       width: `${BASE_SIZE}px`,
       height: `${BASE_SIZE}px`,
       touchAction: "none",
-      userSelect: "none",
       zIndex: "10",
+      ...NO_SELECT_STYLE,
     });
 
     this.base = document.createElement("div");
@@ -39,6 +47,8 @@ export class VirtualJoystick {
       borderRadius: "50%",
       background: "rgba(255, 255, 255, 0.12)",
       border: "2px solid rgba(255, 255, 255, 0.25)",
+      pointerEvents: "none",
+      ...NO_SELECT_STYLE,
     });
 
     this.stick = document.createElement("div");
@@ -55,6 +65,8 @@ export class VirtualJoystick {
       border: "2px solid rgba(255, 255, 255, 0.6)",
       boxShadow: "0 2px 8px rgba(0, 0, 0, 0.35)",
       transition: "background 0.15s",
+      pointerEvents: "none",
+      ...NO_SELECT_STYLE,
     });
 
     this.element.appendChild(this.base);

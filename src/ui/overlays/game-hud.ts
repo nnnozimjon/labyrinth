@@ -13,6 +13,9 @@ function mountHudStyles() {
       --f55-yellow: ${FORMULA55_UI.yellow};
       --f55-yellow-hover: ${FORMULA55_UI.yellowHover};
       --f55-dark: ${FORMULA55_UI.textDark};
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     #game-hud.game-hud--show .game-hud-header {
