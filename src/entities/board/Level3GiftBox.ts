@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { gltfLoader } from "../../utils/gltf-loader";
 import type { PhysicsBoard } from "./PhysicsBoard";
 import type { PhysicsBall } from "../ball/PhysicsBall";
 import {
@@ -8,8 +8,6 @@ import {
 } from "../../physics/collider-utils";
 import { disposeObject3D } from "../../utils/dispose";
 import { easeInCubic } from "../../levels/puzzle-animation";
-
-const loader = new GLTFLoader();
 
 const DEFAULT_POSITION = new THREE.Vector3(0, 0, 0);
 const DETECTION_RADIUS = 0.55;
@@ -65,7 +63,7 @@ export class Level3GiftBox {
     modelUrl: string,
     options: Level3GiftBoxOptions = {}
   ): Promise<Level3GiftBox> {
-    const gltf = await loader.loadAsync(modelUrl);
+    const gltf = await gltfLoader.loadAsync(modelUrl);
     const model = gltf.scene.clone();
     prepareGltfMaterials(model);
 

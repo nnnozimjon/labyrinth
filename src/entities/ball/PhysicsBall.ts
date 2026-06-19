@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { gltfLoader } from "../../utils/gltf-loader";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { prepareGltfMaterials } from "../../physics/collider-utils";
 
@@ -11,8 +11,6 @@ export type PhysicsBallOptions = {
 };
 
 type RapierModule = typeof RAPIER;
-
-const loader = new GLTFLoader();
 
 function centerModelAndGetRadius(model: THREE.Object3D): number {
   model.updateMatrixWorld(true);
@@ -61,7 +59,7 @@ export class PhysicsBall {
     modelUrl: string,
     options: PhysicsBallOptions = {}
   ): Promise<PhysicsBall> {
-    const gltf = await loader.loadAsync(modelUrl);
+    const gltf = await gltfLoader.loadAsync(modelUrl);
     const model = gltf.scene.clone();
     prepareGltfMaterials(model);
 

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { gltfLoader } from "../../utils/gltf-loader";
 import type RAPIER from "@dimforge/rapier3d-compat";
 import type { PhysicsBoard } from "./PhysicsBoard";
 import {
@@ -35,8 +35,6 @@ export type PhysicsPuzzleOptions = {
 
 type RapierModule = typeof RAPIER;
 
-const loader = new GLTFLoader();
-
 export class PhysicsPuzzle {
   readonly visuals: THREE.Object3D[];
   private readonly colliders: RAPIER.Collider[];
@@ -53,7 +51,7 @@ export class PhysicsPuzzle {
     modelUrl: string,
     options: PhysicsPuzzleOptions
   ): Promise<PhysicsPuzzle> {
-    const gltf = await loader.loadAsync(modelUrl);
+    const gltf = await gltfLoader.loadAsync(modelUrl);
     const scale = options.scale ?? board.scale;
     const visuals: THREE.Object3D[] = [];
     const colliders: RAPIER.Collider[] = [];

@@ -1,11 +1,9 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { gltfLoader } from "../../utils/gltf-loader";
 import type { PhysicsBoard } from "../board/PhysicsBoard";
 import type { PhysicsBall } from "../ball/PhysicsBall";
 import { prepareGltfMaterials } from "../../physics/collider-utils";
 import type { HoleLossTriggers, HolePosition } from "./holes-types";
-
-const loader = new GLTFLoader();
 
 const DEBUG_HOLE_TRIGGERS = false;
 
@@ -70,7 +68,7 @@ export class PhysicsHolesLevel2 implements HoleLossTriggers {
     options: PhysicsHolesLevel2Options = {}
   ): Promise<PhysicsHolesLevel2> {
     const holePositions = options.holePositions ?? DEFAULT_HOLE_POSITIONS;
-    const gltf = await loader.loadAsync(modelUrl);
+    const gltf = await gltfLoader.loadAsync(modelUrl);
     const model = gltf.scene.clone();
 
     prepareGltfMaterials(model);

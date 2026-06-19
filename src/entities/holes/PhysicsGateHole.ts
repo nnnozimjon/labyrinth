@@ -1,10 +1,8 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { gltfLoader } from "../../utils/gltf-loader";
 import type { BoardAnchor } from "../board/PhysicsBoard";
 import type { PhysicsBall } from "../ball/PhysicsBall";
 import { prepareGltfMaterials } from "../../physics/collider-utils";
-
-const loader = new GLTFLoader();
 
 // Short delay: ball must be in the hole zone for this many seconds before win fires.
 // Must be shorter than the time to fall 2+ units (~0.43 s at g=24.81).
@@ -26,7 +24,7 @@ export class PhysicsGateHole {
   }
 
   static async create(board: BoardAnchor, modelUrl: string): Promise<PhysicsGateHole> {
-    const gltf = await loader.loadAsync(modelUrl);
+    const gltf = await gltfLoader.loadAsync(modelUrl);
     const model = gltf.scene.clone();
     prepareGltfMaterials(model);
 
