@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "textures:webp": "node scripts/convert-textures-webp.mjs"
+    "postinstall": "node scripts/copy-draco-decoders.mjs",
+    "textures:webp": "node scripts/convert-textures-webp.mjs",
+    "models:draco": "node scripts/draco-compress-models.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.19.3",

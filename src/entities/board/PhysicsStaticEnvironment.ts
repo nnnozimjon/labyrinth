@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { gltfLoader } from "../../utils/gltf-loader";
 import type RAPIER from "@dimforge/rapier3d-compat";
 import type { PhysicsBoard } from "./PhysicsBoard";
 import {
@@ -60,8 +60,6 @@ export type StaticEnvironmentOptions = {
 
 type RapierModule = typeof RAPIER;
 
-const loader = new GLTFLoader();
-
 export class PhysicsStaticEnvironment {
   readonly visual: THREE.Object3D;
   readonly body: RAPIER.RigidBody | null;
@@ -79,7 +77,7 @@ export class PhysicsStaticEnvironment {
     options: StaticEnvironmentOptions = {},
     board?: PhysicsBoard
   ): Promise<PhysicsStaticEnvironment> {
-    const gltf = await loader.loadAsync(modelUrl);
+    const gltf = await gltfLoader.loadAsync(modelUrl);
     const model = gltf.scene;
     prepareGltfMaterials(model);
 

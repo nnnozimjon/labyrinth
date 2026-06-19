@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { gltfLoader } from "../../utils/gltf-loader";
 import type RAPIER from "@dimforge/rapier3d-compat";
 import type { BoardAnchor } from "./PhysicsBoard";
 import {
@@ -28,8 +28,6 @@ export type PhysicsBoardAttachmentOptions = {
 
 type RapierModule = typeof RAPIER;
 
-const loader = new GLTFLoader();
-
 export class PhysicsBoardAttachment {
   readonly visual: THREE.Object3D;
 
@@ -44,7 +42,7 @@ export class PhysicsBoardAttachment {
     modelUrl: string,
     options: PhysicsBoardAttachmentOptions = {}
   ): Promise<PhysicsBoardAttachment> {
-    const gltf = await loader.loadAsync(modelUrl);
+    const gltf = await gltfLoader.loadAsync(modelUrl);
     const model = gltf.scene.clone();
     prepareGltfMaterials(model);
 
