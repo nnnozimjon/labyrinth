@@ -642,10 +642,19 @@ export class Game {
       enabled: DEBUG_BALL_SPAWN_LEVEL3_UI,
     });
 
-    const applyBallSpawnForLevel = (level: number) => {
+    const parkBallForLevel = (level: number) => {
+      ball.autoResetEnabled = false;
+      ball.setStartPosition(getBallStartPosition(level));
+      ball.freeze();
+      ball.visual.visible = false;
+    };
+
+    const releaseBallForLevel = (level: number) => {
       ball.setStartPosition(getBallStartPosition(level));
       ball.reset();
+      ball.unfreeze();
       ball.visual.visible = true;
+      ball.autoResetEnabled = true;
     };
 
     const ballFrozen = { value: false };
@@ -719,8 +728,7 @@ export class Game {
       getLevelContent(levelManager.getCurrentLevel()).holes?.reset();
       lossPending.value = false;
       lossTimer.value = 0;
-      ball.autoResetEnabled = true;
-      applyBallSpawnForLevel(levelManager.getCurrentLevel());
+      releaseBallForLevel(levelManager.getCurrentLevel());
       ballFrozen.value = false;
     };
 
@@ -739,8 +747,7 @@ export class Game {
     const finishLevelTransition = () => {
       levelManager.setCurrentLevel(transitionToLevel.value);
       levelCalendarDisplay?.setLevel(transitionToLevel.value);
-      ball.autoResetEnabled = true;
-      applyBallSpawnForLevel(transitionToLevel.value);
+      releaseBallForLevel(transitionToLevel.value);
       ballFrozen.value = false;
       transitionPhase.value = "none";
       gateHole.reset();
@@ -751,6 +758,7 @@ export class Game {
       transitionToLevel.value = toLevel;
       transitionPhase.value = "level_out";
       transitionTime.value = 0;
+      parkBallForLevel(toLevel);
       const from = getLevelContent(fromLevel);
       ensurePuzzleFinalY(from.puzzle.visuals);
       from.puzzle.setCollidersEnabled(false);
@@ -763,7 +771,7 @@ export class Game {
       lossPending.value = false;
       lossTimer.value = 0;
       ballFrozen.value = true;
-      ball.visual.visible = false;
+      parkBallForLevel(current);
 
       if (current === TOTAL_LEVELS) {
         finalWinOverlay.show();
@@ -785,10 +793,8 @@ export class Game {
     });
 
     finalWinOverlay.onAlreadyClient(() => {
-      ball.visual.visible = true;
+      releaseBallForLevel(levelManager.getCurrentLevel());
       ballFrozen.value = false;
-      ball.autoResetEnabled = true;
-      applyBallSpawnForLevel(levelManager.getCurrentLevel());
       gateHole.reset();
     });
 
@@ -825,7 +831,7 @@ export class Game {
       startOverlay.hide();
       startScreenActive.value = false;
       joystick.element.style.display = "";
-      ball.unfreeze();
+      releaseBallForLevel(DEBUG_START_LEVEL);
 
       if (DEBUG_START_LEVEL === 1) {
         puzzleIntroActive.value = true;
