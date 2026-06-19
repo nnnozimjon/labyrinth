@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { copyFileSync, mkdirSync } from "node:fs";
+import { copyFileSync, mkdirSync, unlinkSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,12 +13,13 @@ const targetDir = join(root, "public/draco");
 
 mkdirSync(targetDir, { recursive: true });
 
-for (const file of [
-  "draco_decoder.js",
-  "draco_decoder.wasm",
-  "draco_wasm_wrapper.js",
-]) {
+for (const file of ["draco_decoder.wasm", "draco_wasm_wrapper.js"]) {
   copyFileSync(join(sourceDir, file), join(targetDir, file));
 }
 
-console.log("Draco decoders copied to public/draco/");
+const legacyJsDecoder = join(targetDir, "draco_decoder.js");
+if (existsSync(legacyJsDecoder)) {
+  unlinkSync(legacyJsDecoder);
+}
+
+console.log("Draco WASM decoder copied to public/draco/ (JS fallback removed)");

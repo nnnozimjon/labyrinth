@@ -1,5 +1,3 @@
-/** Compressed test asset (gltf + external bin) instead of ball.glb. */
-const ballModelUrl = "/test-ball.gltf";
 import boardLevel1ModelUrl from "../board-ground.glb?url";
 import puzzleLevel1ModelUrl from "../puzzles.glb?url";
 import boardLevel2ModelUrl from "../board-ground-level-2.glb?url";
@@ -10,26 +8,26 @@ import puzzleLevel3ModelUrl from "../level3-puzzle.glb?url";
 import vfxHolesLevel3ModelUrl from "../vfx-holes-level3.glb?url";
 import wallsModelUrl from "../board-walls.glb?url";
 import gateModelUrl from "../board-gate.glb?url";
-/** Compressed test asset (gltf + external bin) instead of board-stairs.glb. */
-const stairsModelUrl = "/test-board-stairs.gltf";
 import groundModelUrl from "../ground.glb?url";
 import bookModelUrl from "../book.glb?url";
 import ticketModelUrl from "../ticket.glb?url";
-/** Compressed test asset (gltf + external bin) instead of lamp.glb. */
-const lampModelUrl = "/test-lamp.gltf";
-/** Compressed test asset (gltf + external bin) instead of cup-plate.glb. */
-const cupPlateModelUrl = "/test-cup-plate.gltf";
-/** Compressed test asset (gltf + external bin) instead of level-calendar.glb. */
-const levelCalendarModelUrl = "/test-level-calendar.gltf";
 import boxModelUrl from "../box.glb?url";
 import sandWatchModelUrl from "../sand-watch.glb?url";
 import dicesModelUrl from "../dices.glb?url";
-/** Compressed test asset (gltf + external bin) instead of gift-box.glb. */
-const giftBoxModelUrl = "/test-gift.gltf";
 import vfxGateHoleModelUrl from "../gate-hole-vfx.glb?url";
 
+/** Draco-compressed glTF assets served from `public/`. */
+const gltfModels = {
+  ball: "/ball.gltf",
+  stairs: "/board-stairs.gltf",
+  lamp: "/lamp.gltf",
+  cupPlate: "/cup-plate.gltf",
+  levelCalendar: "/level-calendar.gltf",
+  giftBox: "/gift-box.gltf",
+} as const;
+
 export const models = {
-  ball: ballModelUrl,
+  ...gltfModels,
   boardLevel1: boardLevel1ModelUrl,
   puzzleLevel1: puzzleLevel1ModelUrl,
   boardLevel2: boardLevel2ModelUrl,
@@ -40,16 +38,11 @@ export const models = {
   vfxHolesLevel3: vfxHolesLevel3ModelUrl,
   walls: wallsModelUrl,
   gate: gateModelUrl,
-  stairs: stairsModelUrl,
   ground: groundModelUrl,
   book: bookModelUrl,
   ticket: ticketModelUrl,
-  lamp: lampModelUrl,
-  cupPlate: cupPlateModelUrl,
-  levelCalendar: levelCalendarModelUrl,
   box: boxModelUrl,
   sandWatch: sandWatchModelUrl,
   dices: dicesModelUrl,
-  giftBox: giftBoxModelUrl,
   vfxGateHole: vfxGateHoleModelUrl,
 } as const;

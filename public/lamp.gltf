@@ -400,7 +400,7 @@
 	"buffers":[
 		{
 			"byteLength":32928,
-			"uri":"test-lamp.bin"
+			"uri":"lamp.bin"
 		}
 	]
 }

@@ -148,7 +148,7 @@
 	"buffers":[
 		{
 			"byteLength":2496,
-			"uri":"test-board-stairs.bin"
+			"uri":"board-stairs.bin"
 		}
 	]
 }
