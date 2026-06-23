@@ -63,10 +63,20 @@ type RapierModule = typeof RAPIER;
 export class PhysicsStaticEnvironment {
   readonly visual: THREE.Object3D;
   readonly body: RAPIER.RigidBody | null;
+  private readonly colliders: RAPIER.Collider[];
 
-  private constructor(visual: THREE.Object3D, body: RAPIER.RigidBody | null) {
+  private constructor(
+    visual: THREE.Object3D,
+    body: RAPIER.RigidBody | null,
+    colliders: RAPIER.Collider[]
+  ) {
     this.visual = visual;
     this.body = body;
+    this.colliders = colliders;
+  }
+
+  getColliders(): readonly RAPIER.Collider[] {
+    return this.colliders;
   }
 
   static async create(
@@ -153,14 +163,15 @@ export class PhysicsStaticEnvironment {
     staticWorldGroup.add(model);
 
     let body: RAPIER.RigidBody | null = null;
+    let colliders: RAPIER.Collider[] = [];
     if (options.enableColliders !== false) {
       body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
-      addBoardBodyColliders(RAPIER, world, body, model, {
+      colliders = addBoardBodyColliders(RAPIER, world, body, model, {
         colliderMode: options.colliderMode ?? "auto",
         flatnessThreshold: options.flatnessThreshold,
       });
     }
 
-    return new PhysicsStaticEnvironment(model, body);
+    return new PhysicsStaticEnvironment(model, body, colliders);
   }
 }

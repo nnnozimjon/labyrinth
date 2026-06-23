@@ -7,6 +7,7 @@ import { createRenderer } from "../core/renderer";
 import { createControls } from "../core/controls";
 import { setupResize } from "../core/resize";
 import { createPhysicsWorld } from "../physics/physics-world";
+import { GroundContactTracker } from "../physics/ground-contact-tracker";
 import { PhysicsDebugRenderer } from "../physics/physics-debug";
 import { LightDebugRenderer } from "../physics/light-debug";
 import { LevelManager } from "../levels/LevelManager";
@@ -146,7 +147,7 @@ export class Game {
 
     loading.setStatus("Загрузка моделей...");
 
-    await PhysicsStaticEnvironment.create(
+    const worldGround = await PhysicsStaticEnvironment.create(
       RAPIER,
       world,
       staticWorldGroup,
@@ -162,6 +163,7 @@ export class Game {
         metalness: 0,
       }
     );
+    const groundContactTracker = new GroundContactTracker(worldGround.getColliders());
 
     const boardTextureOptions = {
       textureUrl: textures.ground2,
@@ -697,9 +699,11 @@ export class Game {
 
     const resetAfterLoss = () => {
       getLevelContent(levelManager.getCurrentLevel()).holes?.reset();
+      groundContactTracker.reset();
       lossPending.value = false;
       lossTimer.value = 0;
       ball.autoResetEnabled = true;
+      ball.unfreeze();
       applyBallSpawnForLevel(levelManager.getCurrentLevel());
       ballFrozen.value = false;
     };
@@ -710,6 +714,9 @@ export class Game {
         lossPending.value = true;
         lossTimer.value = 0;
         ball.autoResetEnabled = false;
+        ball.freeze();
+        ball.visual.visible = false;
+        ballFrozen.value = true;
       });
     }
 
@@ -721,6 +728,7 @@ export class Game {
       levelCalendarDisplay?.setLevel(transitionToLevel.value);
       saveLevel(transitionToLevel.value);
       ball.autoResetEnabled = true;
+      ball.unfreeze();
       applyBallSpawnForLevel(transitionToLevel.value);
       ballFrozen.value = false;
       transitionPhase.value = "none";
@@ -743,6 +751,8 @@ export class Game {
       const current = levelManager.getCurrentLevel();
       lossPending.value = false;
       lossTimer.value = 0;
+      ball.autoResetEnabled = false;
+      ball.freeze();
       ballFrozen.value = true;
       ball.visual.visible = false;
 
@@ -767,6 +777,7 @@ export class Game {
     });
 
     finalWinOverlay.onAlreadyClient(() => {
+      ball.unfreeze();
       ball.visual.visible = true;
       ballFrozen.value = false;
       ball.autoResetEnabled = true;
@@ -832,6 +843,7 @@ export class Game {
       collisionEventQueue,
       ballHitSound,
       lossSound,
+      groundContactTracker,
       joystick,
       levelManager,
       levelContents,

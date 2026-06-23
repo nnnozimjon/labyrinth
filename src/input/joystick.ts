@@ -24,6 +24,7 @@ export class VirtualJoystick {
   private pointerId: number | null = null;
   private centerX = 0;
   private centerY = 0;
+  private inputEnabled = true;
 
   constructor() {
     this.element = document.createElement("div");
@@ -79,7 +80,23 @@ export class VirtualJoystick {
     this.element.addEventListener("pointercancel", this.onPointerUp);
   }
 
+  setInputEnabled(enabled: boolean) {
+    if (this.inputEnabled === enabled) return;
+    this.inputEnabled = enabled;
+    if (!enabled) {
+      this.resetInput();
+    }
+  }
+
+  resetInput() {
+    this.x = 0;
+    this.y = 0;
+    this.stick.style.transition = "transform 0.2s ease-out";
+    this.stick.style.transform = "translate(0px, 0px)";
+  }
+
   private onPointerDown = (event: PointerEvent) => {
+    if (!this.inputEnabled) return;
     event.preventDefault();
     event.stopPropagation();
     this.active = true;
@@ -90,7 +107,7 @@ export class VirtualJoystick {
   };
 
   private onPointerMove = (event: PointerEvent) => {
-    if (!this.active || event.pointerId !== this.pointerId) return;
+    if (!this.inputEnabled || !this.active || event.pointerId !== this.pointerId) return;
     event.preventDefault();
     event.stopPropagation();
     this.updateFromPointer(event);
@@ -102,14 +119,13 @@ export class VirtualJoystick {
     event.stopPropagation();
     this.active = false;
     this.pointerId = null;
-    this.x = 0;
-    this.y = 0;
-    this.stick.style.transition = "transform 0.2s ease-out";
-    this.stick.style.transform = "translate(0px, 0px)";
+    this.resetInput();
     this.element.releasePointerCapture(event.pointerId);
   };
 
   private updateFromPointer(event: PointerEvent) {
+    if (!this.inputEnabled) return;
+
     const rect = this.element.getBoundingClientRect();
     this.centerX = rect.left + rect.width / 2;
     this.centerY = rect.top + rect.height / 2;

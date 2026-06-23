@@ -12,6 +12,6 @@ export type HoleLossTriggers = {
   onLoss(callback: () => void): void;
   reset(): void;
   setActive(active: boolean): void;
-  update(delta: number, ball: PhysicsBall): void;
+  update(delta: number, ball: PhysicsBall, isTouchingWorldGround: boolean): void;
   getDebugHelpers(): THREE.Object3D[];
 };

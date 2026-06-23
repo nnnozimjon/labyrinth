@@ -31,6 +31,7 @@ import type { CameraTransition } from "../core/camera-transition";
 import type { LevelCalendarDisplay } from "../levels/LevelCalendarDisplay";
 import type { FailEffect } from "../ui/FailEffect";
 import type { BallHitSound, LossSound } from "../audio";
+import type { GroundContactTracker } from "../physics/ground-contact-tracker";
 
 export type SharedBoardAnchor = BoardAnchor & {
   setRotation(quaternion: THREE.Quaternion): void;
@@ -45,6 +46,7 @@ export type GameLoopContext = {
   collisionEventQueue: RAPIER.EventQueue;
   ballHitSound: BallHitSound;
   lossSound: LossSound;
+  groundContactTracker: GroundContactTracker;
   joystick: VirtualJoystick;
   levelManager: LevelManager;
   levelContents: Map<number, LevelContent>;
@@ -77,6 +79,19 @@ export type GameLoopContext = {
   startScreenActive: { value: boolean };
 };
 
+function isJoystickInputLocked(ctx: GameLoopContext): boolean {
+  return (
+    ctx.startScreenActive.value ||
+    ctx.giftPauseActive.value ||
+    ctx.giftCameraTransition.isActive() ||
+    ctx.lossPending.value ||
+    ctx.lossEffectPlaying.value ||
+    ctx.puzzleIntroActive.value ||
+    ctx.transitionPhase.value !== "none" ||
+    ctx.ballFrozen.value
+  );
+}
+
 export function startGameLoop(ctx: GameLoopContext) {
   let currentTiltX = 0;
   let currentTiltZ = 0;
@@ -91,11 +106,8 @@ export function startGameLoop(ctx: GameLoopContext) {
     const delta = clock.getDelta();
     const lerpFactor = 1 - Math.exp(-TILT_SMOOTHING * delta);
 
-    const gameplayInputLocked =
-      ctx.startScreenActive.value ||
-      ctx.giftPauseActive.value ||
-      ctx.ballFrozen.value ||
-      ctx.giftCameraTransition.isActive();
+    const gameplayInputLocked = isJoystickInputLocked(ctx);
+    ctx.joystick.setInputEnabled(!gameplayInputLocked);
 
     if (!gameplayInputLocked) {
       const targetTiltX = -ctx.joystick.y * MAX_TILT;
@@ -103,6 +115,9 @@ export function startGameLoop(ctx: GameLoopContext) {
 
       currentTiltX = THREE.MathUtils.lerp(currentTiltX, targetTiltX, lerpFactor);
       currentTiltZ = THREE.MathUtils.lerp(currentTiltZ, targetTiltZ, lerpFactor);
+    } else {
+      currentTiltX = THREE.MathUtils.lerp(currentTiltX, 0, lerpFactor);
+      currentTiltZ = THREE.MathUtils.lerp(currentTiltZ, 0, lerpFactor);
     }
 
     boardEuler.set(currentTiltX, 0, currentTiltZ);
@@ -186,6 +201,7 @@ export function startGameLoop(ctx: GameLoopContext) {
     if (!ctx.startScreenActive.value) {
       ctx.world.timestep = delta;
       ctx.world.step(ctx.collisionEventQueue);
+      ctx.groundContactTracker.syncFromWorld(ctx.world, ctx.ball.colliderHandle);
       ctx.collisionEventQueue.drainCollisionEvents((handle1, handle2, started) => {
         if (!started) return;
         if (
@@ -214,18 +230,16 @@ export function startGameLoop(ctx: GameLoopContext) {
       ctx.gateHole.update(delta, ctx.ball);
       const activeHoles = ctx.getLevelContent(ctx.levelManager.getCurrentLevel()).holes;
       if (activeHoles?.isActive && !ctx.gateHole.isNear) {
-        activeHoles.update(delta, ctx.ball);
+        activeHoles.update(delta, ctx.ball, ctx.groundContactTracker.isTouchingGround);
       }
 
     }
 
-    if (ctx.lossPending.value && !ctx.ballFrozen.value && !ctx.giftPauseActive.value) {
+    if (ctx.lossPending.value && !ctx.giftPauseActive.value) {
       ctx.lossTimer.value += delta;
       if (ctx.lossTimer.value >= 1 && !ctx.lossEffectPlaying.value) {
         ctx.lossPending.value = false;
         ctx.lossEffectPlaying.value = true;
-        ctx.ballFrozen.value = true;
-        ctx.ball.visual.visible = false;
         ctx.lossSound.play();
         void ctx.failEffect.play().then(() => {
           ctx.resetAfterLoss();

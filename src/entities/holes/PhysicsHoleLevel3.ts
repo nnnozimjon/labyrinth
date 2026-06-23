@@ -4,11 +4,12 @@ import type { PhysicsBoard } from "../board/PhysicsBoard";
 import type { PhysicsBall } from "../ball/PhysicsBall";
 import { prepareGltfMaterials } from "../../physics/collider-utils";
 import type { HoleLossTriggers, HolePosition } from "./holes-types";
+import { HoleLossState } from "./hole-loss-state";
 
 const DEBUG_HOLE_TRIGGERS = false;
 
-export const HOLE_DETECTION_RADIUS = 0.3;
-const TRIGGER_HEIGHT = 0.01;
+export const HOLE_DETECTION_RADIUS = 0.5;
+const TRIGGER_HEIGHT = 0.1;
 
 /** Level 3 hole trigger positions — update when layout is finalized. */
 const DEFAULT_HOLE_POSITIONS: HolePosition[] = [
@@ -57,6 +58,7 @@ export class PhysicsHolesLevel3 implements HoleLossTriggers {
   private triggered = false;
   private active = false;
   private onLossCallback: (() => void) | null = null;
+  private readonly lossState = new HoleLossState();
 
   private constructor(
     boardVisual: THREE.Object3D,
@@ -178,6 +180,7 @@ export class PhysicsHolesLevel3 implements HoleLossTriggers {
 
   reset() {
     this.triggered = false;
+    this.lossState.reset();
 
     for (const trigger of this.triggers) {
       const mat = trigger.debugMesh.material as THREE.MeshBasicMaterial;
@@ -196,10 +199,11 @@ export class PhysicsHolesLevel3 implements HoleLossTriggers {
     }
     if (!active) {
       this.triggered = false;
+      this.lossState.reset();
     }
   }
 
-  update(delta: number, ball: PhysicsBall) {
+  update(delta: number, ball: PhysicsBall, isTouchingWorldGround: boolean) {
     this.time += delta;
 
     const pulse = 0.5 + 0.5 * Math.sin(this.time * 5);
@@ -213,6 +217,7 @@ export class PhysicsHolesLevel3 implements HoleLossTriggers {
     if (!this.active || this.triggered) return;
 
     const ballPosition = ball.body.translation();
+    let overHoleIndex: number | null = null;
 
     for (let i = 0; i < this.triggers.length; i++) {
       const trigger = this.triggers[i];
@@ -224,26 +229,37 @@ export class PhysicsHolesLevel3 implements HoleLossTriggers {
       const dz = ballPosition.z - trigger.centerWorld.z;
 
       const distanceXZ = Math.sqrt(dx * dx + dz * dz);
-      const isTouchingVisibleCylinder = distanceXZ <= HOLE_DETECTION_RADIUS;
+      if (distanceXZ <= HOLE_DETECTION_RADIUS) {
+        overHoleIndex = i;
+        break;
+      }
+    }
 
-      if (isTouchingVisibleCylinder) {
-        this.triggered = true;
+    const shouldLose = this.lossState.update({
+      isOverHole: overHoleIndex !== null,
+      triggerIndex: overHoleIndex,
+      isTouchingWorldGround,
+    });
 
+    if (shouldLose) {
+      const triggerIndex = this.lossState.triggerIndex ?? overHoleIndex ?? 0;
+      const trigger = this.triggers[triggerIndex];
+      this.triggered = true;
+
+      if (trigger) {
         const mat = trigger.debugMesh.material as THREE.MeshBasicMaterial;
         mat.color.set(0xffff00);
         mat.opacity = 0.8;
-
-        console.log("[PhysicsHolesLevel3] LOSS TRIGGERED BY VISIBLE CYLINDER", {
-          triggerIndex: i,
-          ballPosition,
-          triggerCenter: trigger.centerWorld,
-          distanceXZ,
-          detectionRadius: HOLE_DETECTION_RADIUS,
-        });
-
-        this.onLossCallback?.();
-        break;
       }
+
+      console.log("[PhysicsHolesLevel3] LOSS TRIGGERED", {
+        triggerIndex,
+        ballPosition,
+        triggerCenter: trigger?.centerWorld,
+        isTouchingWorldGround,
+      });
+
+      this.onLossCallback?.();
     }
   }
 }
