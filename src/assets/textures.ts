@@ -11,5 +11,4 @@ export const textures = {
   level2: "/textures/level-2.webp",
   level3: "/textures/level-3.webp",
   boxCover: "/textures/box-cover.webp",
-  boostArrow: "/textures/boost-arrow.webp",
 } as const;

@@ -18,7 +18,7 @@ export const SHOW_COLLIDERS = false;
 /** When true, shows helpers for scene lights (position and direction). */
 export const SHOW_LIGHT_HELPERS = false;
 
-/** When true, shows registered debug helper meshes (hole triggers, boost pads, etc.). */
+/** When true, shows registered debug helper meshes (hole triggers, etc.). */
 export const SHOW_DEBUG_HELPERS = false;
 
 /** When true, enables OrbitControls camera orbit / pan / zoom. */

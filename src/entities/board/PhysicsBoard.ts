@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { gltfLoader } from "../../utils/gltf-loader";
 import type RAPIER from "@dimforge/rapier3d-compat";
 import {
+  applyCollisionEvents,
   centerModelAtPivot,
   extractLocalTrimesh,
   getBounds,
@@ -113,10 +114,13 @@ export class PhysicsBoard implements BoardAnchor {
     if (useBoxCollider) {
       colliders.push(
         world.createCollider(
-          RAPIER.ColliderDesc.cuboid(
-            bounds.size.x / 2,
-            bounds.size.y / 2,
-            bounds.size.z / 2
+          applyCollisionEvents(
+            RAPIER,
+            RAPIER.ColliderDesc.cuboid(
+              bounds.size.x / 2,
+              bounds.size.y / 2,
+              bounds.size.z / 2
+            )
           ),
           body
         )
@@ -124,7 +128,10 @@ export class PhysicsBoard implements BoardAnchor {
     } else {
       const { vertices, indices } = extractLocalTrimesh(model);
       colliders.push(
-        world.createCollider(RAPIER.ColliderDesc.trimesh(vertices, indices), body)
+        world.createCollider(
+          applyCollisionEvents(RAPIER, RAPIER.ColliderDesc.trimesh(vertices, indices)),
+          body
+        )
       );
     }
 
@@ -193,7 +200,6 @@ export class PhysicsBoard implements BoardAnchor {
   setOpacity(opacity: number) {
     this.visual.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
-      if (child.userData.boostPad) return;
 
       const materials = Array.isArray(child.material)
         ? child.material

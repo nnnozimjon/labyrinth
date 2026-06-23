@@ -37,7 +37,6 @@ function getSettings(relativePath) {
   if (name.includes("ground-2") || name.includes("fabric-2")) return { maxWidth: 896, quality: 45 };
   if (name.endsWith("/fabric.webp")) return { maxWidth: 896, quality: 46 };
   if (name.includes("stairs-1")) return { maxWidth: 640, quality: 48 };
-  if (name.includes("boost-arrow")) return { maxWidth: 448, quality: 48 };
   if (name.includes("book-cover") || name.includes("box-cover")) return { maxWidth: 448, quality: 50 };
   if (name.includes("tickets")) return { maxWidth: 448, quality: 52 };
   if (name.includes("level-")) return { maxWidth: 384, quality: 48 };

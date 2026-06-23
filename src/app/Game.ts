@@ -40,7 +40,6 @@ import {
   Level3GiftBox,
 } from "../entities/board";
 import { PhysicsHolesLevel2, PhysicsHolesLevel3, PhysicsGateHole } from "../entities/holes";
-import { BoostPad } from "../entities/boost-pad";
 import { createHolesLevel3DebugUI } from "../entities/holes/holes-level3-debug";
 import {
   SAND_WATCH_MATERIAL_OVERRIDES,
@@ -93,6 +92,7 @@ import { createFinalWinOverlay } from "../ui/FinalWinOverlay";
 import { CameraTransition } from "../core/camera-transition";
 import type { CameraState } from "../core/camera-transition";
 import { startGameLoop } from "./game-loop";
+import { BallHitSound, LossSound } from "../audio";
 
 export class Game {
   private readonly scene = createScene();
@@ -124,6 +124,9 @@ export class Game {
     loading.setStatus("Загрузка игры...");
 
     const { RAPIER, world } = await createPhysicsWorld();
+    const collisionEventQueue = new RAPIER.EventQueue(true);
+    const ballHitSound = new BallHitSound();
+    const lossSound = new LossSound();
     const joystick = new VirtualJoystick();
 
     const sceneLights = setupBlenderStyleLighting(this.scene);
@@ -439,27 +442,6 @@ export class Game {
       enabled: DEBUG_HOLES_LEVEL3_UI,
     });
 
-    const boostPadLevel3A = await BoostPad.create(boardLevel3.visual, {
-      textureUrl: textures.boostArrow,
-      position: new THREE.Vector3(-0.2, 0, -2),
-      rotationY: Math.PI * 1,
-      impulseStrength: -1.2,
-    });
-    const boostPadLevel3B = await BoostPad.create(boardLevel3.visual, {
-      textureUrl: textures.boostArrow,
-      position: new THREE.Vector3(2.2, 0, -1.8),
-      rotationY: -Math.PI * 1.2,
-      impulseStrength: -1.2,
-    });
-
-    const boostPadsLevel3 = [boostPadLevel3A, boostPadLevel3B];
-    for (const boostPad of boostPadsLevel3) {
-      levelManager.registerLevelObject(3, boostPad.visual);
-      for (const helper of boostPad.getDebugHelpers()) {
-        levelManager.registerDebugHelper(3, helper);
-      }
-    }
-
     const puzzleLevel1 = await PhysicsPuzzle.create(
       RAPIER,
       world,
@@ -541,13 +523,12 @@ export class Game {
       .filter((fan): fan is PuzzleFanRotation => fan !== null);
 
     const levelContents = new Map<number, LevelContent>([
-      [1, { board, puzzle: puzzleLevel1, holes: null, fans: puzzleFansLevel1, boostPads: [] }],
+      [1, { board, puzzle: puzzleLevel1, holes: null, fans: puzzleFansLevel1 }],
       [2, {
         board: boardLevel2,
         puzzle: puzzleLevel2,
         holes: holesLevel2,
         fans: puzzleFansLevel2,
-        boostPads: [],
       }],
       [3, {
         board: boardLevel3,
@@ -555,7 +536,6 @@ export class Game {
         holes: holesLevel3,
         fans: puzzleFansLevel3,
         giftBox: giftBoxLevel3,
-        boostPads: boostPadsLevel3,
       }],
     ]);
 
@@ -589,16 +569,10 @@ export class Game {
         holesLevel3.setActive(true);
         giftBoxLevel3.setActive(true);
         gateHole.setDetectionEnabled(true);
-        for (const boostPad of boostPadsLevel3) {
-          boostPad.setActive(true);
-        }
       },
       onDeactivate: () => {
         holesLevel3.setActive(false);
         giftBoxLevel3.setActive(false);
-        for (const boostPad of boostPadsLevel3) {
-          boostPad.setActive(false);
-        }
       },
     });
 
@@ -825,6 +799,11 @@ export class Game {
     const campaignOverlay = createCampaignInfoOverlay();
     const hud = createGameHud();
     hud.menuButton.addEventListener("click", () => campaignOverlay.show());
+    hud.soundButton.addEventListener("click", () => {
+      const enabled = !ballHitSound.isEnabled();
+      ballHitSound.setEnabled(enabled);
+      lossSound.setEnabled(enabled);
+    });
     const startOverlay = createStartOverlay(startLevel);
     joystick.element.style.display = "none";
     ball.freeze();
@@ -834,6 +813,8 @@ export class Game {
       startScreenActive.value = false;
       joystick.element.style.display = "";
       ball.unfreeze();
+      ballHitSound.unlock();
+      lossSound.unlock();
       saveLevel(startLevel);
 
       if (startLevel === 1) {
@@ -848,6 +829,9 @@ export class Game {
       renderer: this.renderer,
       controls: this.controls,
       world,
+      collisionEventQueue,
+      ballHitSound,
+      lossSound,
       joystick,
       levelManager,
       levelContents,

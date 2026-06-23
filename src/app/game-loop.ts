@@ -30,6 +30,7 @@ import type { createCameraDebugMonitor } from "../utils/camera-debug";
 import type { CameraTransition } from "../core/camera-transition";
 import type { LevelCalendarDisplay } from "../levels/LevelCalendarDisplay";
 import type { FailEffect } from "../ui/FailEffect";
+import type { BallHitSound, LossSound } from "../audio";
 
 export type SharedBoardAnchor = BoardAnchor & {
   setRotation(quaternion: THREE.Quaternion): void;
@@ -41,6 +42,9 @@ export type GameLoopContext = {
   renderer: THREE.WebGLRenderer;
   controls: OrbitControls;
   world: RAPIER.World;
+  collisionEventQueue: RAPIER.EventQueue;
+  ballHitSound: BallHitSound;
+  lossSound: LossSound;
   joystick: VirtualJoystick;
   levelManager: LevelManager;
   levelContents: Map<number, LevelContent>;
@@ -181,7 +185,24 @@ export function startGameLoop(ctx: GameLoopContext) {
 
     if (!ctx.startScreenActive.value) {
       ctx.world.timestep = delta;
-      ctx.world.step();
+      ctx.world.step(ctx.collisionEventQueue);
+      ctx.collisionEventQueue.drainCollisionEvents((handle1, handle2, started) => {
+        if (!started) return;
+        if (
+          handle1 !== ctx.ball.colliderHandle &&
+          handle2 !== ctx.ball.colliderHandle
+        ) {
+          return;
+        }
+        if (
+          ctx.startScreenActive.value ||
+          ctx.ballFrozen.value ||
+          ctx.giftPauseActive.value
+        ) {
+          return;
+        }
+        ctx.ballHitSound.play();
+      });
     }
 
     ctx.physicsDebug?.update();
@@ -196,12 +217,6 @@ export function startGameLoop(ctx: GameLoopContext) {
         activeHoles.update(delta, ctx.ball);
       }
 
-      const boostPads = ctx.getLevelContent(ctx.levelManager.getCurrentLevel()).boostPads;
-      for (const boostPad of boostPads) {
-        if (!boostPad.isRemoved) {
-          boostPad.update(delta, ctx.ball);
-        }
-      }
     }
 
     if (ctx.lossPending.value && !ctx.ballFrozen.value && !ctx.giftPauseActive.value) {
@@ -211,6 +226,7 @@ export function startGameLoop(ctx: GameLoopContext) {
         ctx.lossEffectPlaying.value = true;
         ctx.ballFrozen.value = true;
         ctx.ball.visual.visible = false;
+        ctx.lossSound.play();
         void ctx.failEffect.play().then(() => {
           ctx.resetAfterLoss();
           ctx.lossEffectPlaying.value = false;

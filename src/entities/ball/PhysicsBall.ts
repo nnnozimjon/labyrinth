@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { gltfLoader } from "../../utils/gltf-loader";
 import RAPIER from "@dimforge/rapier3d-compat";
-import { prepareGltfMaterials } from "../../physics/collider-utils";
+import { applyCollisionEvents, prepareGltfMaterials } from "../../physics/collider-utils";
 
 export type PhysicsBallOptions = {
   /** Override the auto-calculated sphere collider radius. */
@@ -35,6 +35,7 @@ function scaleModelToRadius(model: THREE.Object3D, currentRadius: number, target
 export class PhysicsBall {
   readonly visual: THREE.Group;
   readonly body: RAPIER.RigidBody;
+  readonly colliderHandle: number;
   readonly colliderRadius: number;
   private readonly startPosition: THREE.Vector3;
 
@@ -43,11 +44,13 @@ export class PhysicsBall {
   private constructor(
     visual: THREE.Group,
     body: RAPIER.RigidBody,
+    colliderHandle: number,
     colliderRadius: number,
     startPosition: THREE.Vector3
   ) {
     this.visual = visual;
     this.body = body;
+    this.colliderHandle = colliderHandle;
     this.colliderRadius = colliderRadius;
     this.startPosition = startPosition.clone();
   }
@@ -78,15 +81,18 @@ export class PhysicsBall {
       .setTranslation(startPosition.x, startPosition.y, startPosition.z);
     const body = world.createRigidBody(bodyDesc);
 
-    world.createCollider(
-      RAPIER.ColliderDesc.ball(0.3).setRestitution(options.restitution ?? 0.6),
+    const collider = world.createCollider(
+      applyCollisionEvents(
+        RAPIER,
+        RAPIER.ColliderDesc.ball(0.3).setRestitution(options.restitution ?? 0.6)
+      ),
       body
     );
 
     visual.position.copy(startPosition);
     scene.add(visual);
 
-    return new PhysicsBall(visual, body, 0.3, startPosition);
+    return new PhysicsBall(visual, body, collider.handle, 0.3, startPosition);
   }
 
   reset() {

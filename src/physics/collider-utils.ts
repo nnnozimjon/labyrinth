@@ -350,6 +350,13 @@ export function extractScaledMeshGeometryTrimesh(mesh: THREE.Mesh): {
   };
 }
 
+export function applyCollisionEvents(
+  RAPIER: RapierModule,
+  desc: RAPIER.ColliderDesc
+): RAPIER.ColliderDesc {
+  return desc.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+}
+
 export function addBoardBodyColliders(
   RAPIER: RapierModule,
   world: RAPIER.World,
@@ -379,11 +386,14 @@ export function addBoardBodyColliders(
 
       colliders.push(
         world.createCollider(
-          RAPIER.ColliderDesc.cuboid(
-            bounds.size.x / 2,
-            bounds.size.y / 2,
-            bounds.size.z / 2
-          ).setTranslation(center.x, center.y, center.z),
+          applyCollisionEvents(
+            RAPIER,
+            RAPIER.ColliderDesc.cuboid(
+              bounds.size.x / 2,
+              bounds.size.y / 2,
+              bounds.size.z / 2
+            ).setTranslation(center.x, center.y, center.z)
+          ),
           body
         )
       );
@@ -393,7 +403,7 @@ export function addBoardBodyColliders(
     const { vertices, indices } = extractMeshTrimesh(child);
     colliders.push(
       world.createCollider(
-        RAPIER.ColliderDesc.trimesh(vertices, indices),
+        applyCollisionEvents(RAPIER, RAPIER.ColliderDesc.trimesh(vertices, indices)),
         body
       )
     );
@@ -485,10 +495,13 @@ export function addRotatingPartBoardColliders(
         .applyQuaternion(meshQuaternion.invert());
 
       const collider = world.createCollider(
-        RAPIER.ColliderDesc.cuboid(
-          Math.max(worldSize.x / 2, MIN_COLLIDER_HALF_EXTENT),
-          Math.max(worldSize.y / 2, MIN_COLLIDER_HALF_EXTENT),
-          Math.max(worldSize.z / 2, MIN_COLLIDER_HALF_EXTENT)
+        applyCollisionEvents(
+          RAPIER,
+          RAPIER.ColliderDesc.cuboid(
+            Math.max(worldSize.x / 2, MIN_COLLIDER_HALF_EXTENT),
+            Math.max(worldSize.y / 2, MIN_COLLIDER_HALF_EXTENT),
+            Math.max(worldSize.z / 2, MIN_COLLIDER_HALF_EXTENT)
+          )
         ),
         body
       );
@@ -504,7 +517,7 @@ export function addRotatingPartBoardColliders(
 
     const { vertices, indices } = extractScaledMeshGeometryTrimesh(child);
     const collider = world.createCollider(
-      RAPIER.ColliderDesc.trimesh(vertices, indices),
+      applyCollisionEvents(RAPIER, RAPIER.ColliderDesc.trimesh(vertices, indices)),
       body
     );
     const entry: RotatingBoardCollider = { collider, mesh: child };

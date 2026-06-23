@@ -16,7 +16,6 @@ const targets = [
   { path: "public/textures/ground-2.webp", maxWidth: 2048 },
   { path: "public/textures/fabric-2.webp", maxWidth: 2048 },
   { path: "public/textures/fabric.webp", maxWidth: 2048 },
-  { path: "public/textures/boost-arrow.webp", maxWidth: 1024 },
   { path: "public/textures/book-cover.webp", maxWidth: 1024 },
   { path: "public/textures/box-cover.webp", maxWidth: 1024 },
   { path: "public/textures/level-1.webp", maxWidth: 1024 },
