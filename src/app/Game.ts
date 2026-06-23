@@ -93,7 +93,8 @@ import { createFinalWinOverlay } from "../ui/FinalWinOverlay";
 import { CameraTransition } from "../core/camera-transition";
 import type { CameraState } from "../core/camera-transition";
 import { startGameLoop } from "./game-loop";
-import { BallHitSound, LossSound } from "../audio";
+import { GameSoundManager } from "../audio";
+import { setSoundEnabled } from "../ui/overlays/game-hud";
 
 export class Game {
   private readonly scene = createScene();
@@ -126,8 +127,7 @@ export class Game {
 
     const { RAPIER, world } = await createPhysicsWorld();
     const collisionEventQueue = new RAPIER.EventQueue(true);
-    const ballHitSound = new BallHitSound();
-    const lossSound = new LossSound();
+    const soundManager = new GameSoundManager();
     const joystick = new VirtualJoystick();
 
     const sceneLights = setupBlenderStyleLighting(this.scene);
@@ -486,6 +486,8 @@ export class Game {
     preparePuzzleDropAnimation(puzzleLevel1.visuals, PUZZLE_INTRO_START_Y);
 
     loading.setProgress(85);
+    loading.setStatus("Загрузка звуков...");
+    await soundManager.preload();
 
     const startScreenActive = { value: true };
     const puzzleIntroActive = { value: false };
@@ -811,9 +813,12 @@ export class Game {
     const hud = createGameHud();
     hud.menuButton.addEventListener("click", () => campaignOverlay.show());
     hud.soundButton.addEventListener("click", () => {
-      const enabled = !ballHitSound.isEnabled();
-      ballHitSound.setEnabled(enabled);
-      lossSound.setEnabled(enabled);
+      const enabled = !soundManager.isEnabled();
+      soundManager.setEnabled(enabled);
+      setSoundEnabled(hud.soundButton, enabled);
+      if (enabled) {
+        void soundManager.unlock();
+      }
     });
     const startOverlay = createStartOverlay(startLevel);
     joystick.element.style.display = "none";
@@ -824,8 +829,9 @@ export class Game {
       startScreenActive.value = false;
       joystick.element.style.display = "";
       ball.unfreeze();
-      ballHitSound.unlock();
-      lossSound.unlock();
+      if (soundManager.isEnabled()) {
+        void soundManager.unlock();
+      }
       saveLevel(startLevel);
 
       if (startLevel === 1) {
@@ -841,8 +847,7 @@ export class Game {
       controls: this.controls,
       world,
       collisionEventQueue,
-      ballHitSound,
-      lossSound,
+      soundManager,
       groundContactTracker,
       joystick,
       levelManager,

@@ -93,6 +93,7 @@ function makeHeaderIconButton(label: string, path: string): HTMLButtonElement {
   btn.append(iconWrap);
 
   btn.addEventListener("mouseenter", () => {
+    if (btn.dataset.soundEnabled === "true") return;
     if (iconPath) iconPath.setAttribute("fill", FORMULA55_UI.textDark);
     Object.assign(icon.style, { filter: "none" });
     Object.assign(btn.style, {
@@ -103,6 +104,11 @@ function makeHeaderIconButton(label: string, path: string): HTMLButtonElement {
   });
 
   btn.addEventListener("mouseleave", () => {
+    if (btn.dataset.soundEnabled === "true") return;
+    if (btn.dataset.iconVariant === "sound") {
+      setSoundEnabled(btn, false);
+      return;
+    }
     if (iconPath) iconPath.setAttribute("fill", FORMULA55_UI.yellow);
     Object.assign(icon.style, {
       filter: "drop-shadow(0 0 8px rgba(255,221,38,0.35))",
@@ -208,6 +214,7 @@ export function createGameHud() {
     "Sound",
     "M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 0 0-2.15-3.82v7.63A4.48 4.48 0 0 0 16.5 12zm2.82-2.82A7.48 7.48 0 0 1 20 12a7.48 7.48 0 0 1-1.68 4.82l-1.42-1.42A5.48 5.48 0 0 0 17.5 12a5.48 5.48 0 0 0-1.5-3.8l1.42-1.42z"
   );
+  soundBtn.dataset.iconVariant = "sound";
 
   actions.append(menuBtn, soundBtn);
   header.append(logo, actions);
@@ -215,10 +222,55 @@ export function createGameHud() {
   document.body.appendChild(hud);
 
   hud.classList.add("game-hud--show");
+  setSoundEnabled(soundBtn, false);
 
   return {
     element: hud,
     menuButton: menuBtn,
     soundButton: soundBtn,
   };
+}
+
+const SOUND_BTN_DEFAULT_BACKGROUND = `
+  linear-gradient(145deg, rgba(22,22,22,0.92), rgba(0,0,0,0.72)),
+  repeating-linear-gradient(135deg, rgba(255,221,38,0.1) 0 6px, transparent 6px 14px)
+`;
+const SOUND_BTN_DEFAULT_BOX_SHADOW = `
+  0 12px 26px rgba(0,0,0,0.46),
+  0 0 18px rgba(255,221,38,0.16),
+  inset 0 1px 0 rgba(255,255,255,0.12)
+`;
+
+export function setSoundEnabled(button: HTMLButtonElement, enabled: boolean) {
+  button.dataset.soundEnabled = enabled ? "true" : "false";
+
+  const icon = button.querySelector("svg");
+  const iconPath = button.querySelector("path");
+
+  if (enabled) {
+    if (iconPath) iconPath.setAttribute("fill", FORMULA55_UI.textDark);
+    if (icon) {
+      Object.assign(icon.style, { filter: "none" });
+    }
+    Object.assign(button.style, {
+      background: FORMULA55_UI.yellow,
+      borderColor: FORMULA55_UI.yellow,
+      boxShadow: `
+        0 16px 34px rgba(0,0,0,0.55),
+        0 0 26px rgba(255,221,38,0.32),
+        inset 0 1px 0 rgba(255,255,255,0.18)
+      `,
+    });
+    return;
+  }
+
+  if (iconPath) iconPath.setAttribute("fill", "rgba(255,255,255,0.42)");
+  if (icon) {
+    Object.assign(icon.style, { filter: "none" });
+  }
+  Object.assign(button.style, {
+    background: SOUND_BTN_DEFAULT_BACKGROUND,
+    borderColor: "rgba(255,255,255,0.28)",
+    boxShadow: SOUND_BTN_DEFAULT_BOX_SHADOW,
+  });
 }

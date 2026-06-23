@@ -30,7 +30,7 @@ import type { createCameraDebugMonitor } from "../utils/camera-debug";
 import type { CameraTransition } from "../core/camera-transition";
 import type { LevelCalendarDisplay } from "../levels/LevelCalendarDisplay";
 import type { FailEffect } from "../ui/FailEffect";
-import type { BallHitSound, LossSound } from "../audio";
+import type { GameSoundManager } from "../audio";
 import type { GroundContactTracker } from "../physics/ground-contact-tracker";
 
 export type SharedBoardAnchor = BoardAnchor & {
@@ -44,8 +44,7 @@ export type GameLoopContext = {
   controls: OrbitControls;
   world: RAPIER.World;
   collisionEventQueue: RAPIER.EventQueue;
-  ballHitSound: BallHitSound;
-  lossSound: LossSound;
+  soundManager: GameSoundManager;
   groundContactTracker: GroundContactTracker;
   joystick: VirtualJoystick;
   levelManager: LevelManager;
@@ -217,7 +216,7 @@ export function startGameLoop(ctx: GameLoopContext) {
         ) {
           return;
         }
-        ctx.ballHitSound.play();
+        ctx.soundManager.playHit();
       });
     }
 
@@ -240,7 +239,7 @@ export function startGameLoop(ctx: GameLoopContext) {
       if (ctx.lossTimer.value >= 1 && !ctx.lossEffectPlaying.value) {
         ctx.lossPending.value = false;
         ctx.lossEffectPlaying.value = true;
-        ctx.lossSound.play();
+        ctx.soundManager.playLoss();
         void ctx.failEffect.play().then(() => {
           ctx.resetAfterLoss();
           ctx.lossEffectPlaying.value = false;
