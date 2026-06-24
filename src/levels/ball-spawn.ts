@@ -6,11 +6,14 @@ export type BallSpawnPosition = {
   z: number;
 };
 
+/** World-space Y for the ball center on spawn (above the board surface at y = 0). */
+export const BALL_START_Y = 0.3;
+
 /** World-space ball spawn for each level. */
 export const LEVEL_BALL_START_POSITIONS: Record<number, BallSpawnPosition> = {
-  1: { x: 0, y: 0.3, z: 3.6 },  
-  2: { x: 0, y: 0.3, z: 3.6 },
-  3: { x: 0, y: 0.3, z: 3.6 },
+  1: { x: 0, y: BALL_START_Y, z: 3.6 },
+  2: { x: 0, y: BALL_START_Y, z: 3.6 },
+  3: { x: 0, y: BALL_START_Y, z: 3.6 },
 };
 
 export function getBallStartPosition(level: number): THREE.Vector3 {

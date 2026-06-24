@@ -15,6 +15,7 @@ export class PhysicsGateHole {
   private readonly meshes: THREE.Mesh[] = [];
   private time = 0;
   private overTimer = 0;
+  private engaged = false;
   private triggered = false;
   private active = true;
   private onWinCallback: (() => void) | null = null;
@@ -65,6 +66,7 @@ export class PhysicsGateHole {
 
   reset() {
     this.overTimer = 0;
+    this.engaged = false;
     this.triggered = false;
   }
 
@@ -81,7 +83,7 @@ export class PhysicsGateHole {
     this.setDetectionEnabled(active);
   }
 
-  update(delta: number, ball: PhysicsBall) {
+  update(delta: number, ball: PhysicsBall, isTouchingWorldGround: boolean) {
     this.time += delta;
     const pulse = 0.5 + 0.5 * Math.sin(this.time * 5);
     for (const mesh of this.meshes) {
@@ -113,12 +115,18 @@ export class PhysicsGateHole {
       t.y < holeCenter.y + HOLE_ENTRY_OFFSET;
 
     if (isNear) {
+      this.engaged = true;
+    }
+
+    // Win only after the ball entered the gate and reached the world ground (same as loss holes).
+    if (this.engaged && isTouchingWorldGround) {
       this.overTimer += delta;
       if (this.overTimer >= WIN_DELAY) {
         this.triggered = true;
         this.onWinCallback?.();
       }
-    } else {
+    } else if (!isNear && !isTouchingWorldGround) {
+      this.engaged = false;
       this.overTimer = 0;
     }
   }

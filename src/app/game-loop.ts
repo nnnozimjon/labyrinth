@@ -76,6 +76,7 @@ export type GameLoopContext = {
   finishLevelTransition: () => void;
   startLevelTransition: (fromLevel: number, toLevel: number) => void;
   startScreenActive: { value: boolean };
+  spawnGuardFrames: { value: number };
 };
 
 function isJoystickInputLocked(ctx: GameLoopContext): boolean {
@@ -226,7 +227,7 @@ export function startGameLoop(ctx: GameLoopContext) {
     ctx.giftCameraTransition.update(delta, ctx.camera, ctx.controls);
 
     if (!ctx.startScreenActive.value && !ctx.giftPauseActive.value && !ctx.ballFrozen.value) {
-      ctx.gateHole.update(delta, ctx.ball);
+      ctx.gateHole.update(delta, ctx.ball, ctx.groundContactTracker.isTouchingGround);
       const activeHoles = ctx.getLevelContent(ctx.levelManager.getCurrentLevel()).holes;
       if (activeHoles?.isActive && !ctx.gateHole.isNear) {
         activeHoles.update(delta, ctx.ball, ctx.groundContactTracker.isTouchingGround);
@@ -249,6 +250,11 @@ export function startGameLoop(ctx: GameLoopContext) {
 
     if (!ctx.ballFrozen.value) {
       ctx.ball.syncFromPhysics();
+    }
+
+    if (ctx.spawnGuardFrames.value > 0) {
+      ctx.ball.ensureSpawnIntegrity(ctx.scene);
+      ctx.spawnGuardFrames.value -= 1;
     }
 
     if (!ctx.giftCameraTransition.isActive()) {

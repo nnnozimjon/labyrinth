@@ -92,7 +92,9 @@ export class PhysicsBall {
     visual.position.copy(startPosition);
     scene.add(visual);
 
-    return new PhysicsBall(visual, body, collider.handle, 0.3, startPosition);
+    const ball = new PhysicsBall(visual, body, collider.handle, 0.3, startPosition);
+    ball.ensureSpawnIntegrity(scene);
+    return ball;
   }
 
   reset() {
@@ -106,6 +108,27 @@ export class PhysicsBall {
 
     this.visual.position.copy(this.startPosition);
     this.visual.quaternion.identity();
+  }
+
+  /** Ensures the ball is in the scene, visible, and at its spawn position. */
+  ensureSpawnIntegrity(scene: THREE.Scene) {
+    if (this.visual.parent !== scene) {
+      this.visual.parent?.remove(this.visual);
+      scene.add(this.visual);
+    }
+
+    this.visual.visible = true;
+
+    const position = this.body.translation();
+    const drift =
+      Math.abs(position.x - this.startPosition.x) +
+      Math.abs(position.y - this.startPosition.y) +
+      Math.abs(position.z - this.startPosition.z);
+    const belowSpawn = position.y < this.startPosition.y - 0.05;
+
+    if (drift > 0.08 || belowSpawn) {
+      this.reset();
+    }
   }
 
   setStartPosition(position: THREE.Vector3 | { x: number; y: number; z: number }) {

@@ -490,6 +490,7 @@ export class Game {
     await soundManager.preload();
 
     const startScreenActive = { value: true };
+    const spawnGuardFrames = { value: 0 };
     const puzzleIntroActive = { value: false };
     const puzzleIntroTime = { value: 0 };
 
@@ -629,7 +630,7 @@ export class Game {
     const applyBallSpawnForLevel = (level: number) => {
       ball.setStartPosition(getBallStartPosition(level));
       ball.reset();
-      ball.visual.visible = true;
+      ball.ensureSpawnIntegrity(this.scene);
     };
 
     const ballFrozen = { value: false };
@@ -707,6 +708,7 @@ export class Game {
       ball.autoResetEnabled = true;
       ball.unfreeze();
       applyBallSpawnForLevel(levelManager.getCurrentLevel());
+      spawnGuardFrames.value = 24;
       ballFrozen.value = false;
     };
 
@@ -732,6 +734,7 @@ export class Game {
       ball.autoResetEnabled = true;
       ball.unfreeze();
       applyBallSpawnForLevel(transitionToLevel.value);
+      spawnGuardFrames.value = 24;
       ballFrozen.value = false;
       transitionPhase.value = "none";
       gateHole.reset();
@@ -828,6 +831,8 @@ export class Game {
       startOverlay.hide();
       startScreenActive.value = false;
       joystick.element.style.display = "";
+      applyBallSpawnForLevel(startLevel);
+      spawnGuardFrames.value = 24;
       ball.unfreeze();
       if (soundManager.isEnabled()) {
         void soundManager.unlock();
@@ -879,6 +884,7 @@ export class Game {
       finishLevelTransition,
       startLevelTransition,
       startScreenActive,
+      spawnGuardFrames,
     });
   }
 }
