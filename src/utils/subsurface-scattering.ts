@@ -18,12 +18,10 @@ export type SubsurfaceSurfaceOptions = {
   roughness?: number;
 };
 
-// Fix: use LinearSRGBColorSpace for compatibility with Three.js r152+
-// Falls back gracefully if the constant isn't available in older builds
+/** Uniform white thickness map: scattering strength then comes from the uniforms alone. */
 const WHITE_THICKNESS_MAP = (() => {
   const texture = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
-  texture.colorSpace =
-    (THREE as any).LinearSRGBColorSpace ?? (THREE as any).LinearEncoding ?? THREE.NoColorSpace;
+  texture.colorSpace = THREE.LinearSRGBColorSpace;
   texture.needsUpdate = true;
   return texture;
 })();

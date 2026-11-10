@@ -1,11 +1,11 @@
 import * as THREE from "three";
-import { gltfLoader } from "../../utils/gltf-loader";
+import { loadGltf } from "../../utils/gltf-loader";
 import type RAPIER from "@dimforge/rapier3d-compat";
 import type { PhysicsBoard } from "./PhysicsBoard";
 import {
   addBoardBodyColliders,
-  placeOnBoardSurface,
   prepareGltfMaterials,
+  restObjectBottomAtY,
   type BoardColliderMode,
 } from "../../physics/collider-utils";
 import {
@@ -51,7 +51,7 @@ export class PhysicsPuzzle {
     modelUrl: string,
     options: PhysicsPuzzleOptions
   ): Promise<PhysicsPuzzle> {
-    const gltf = await gltfLoader.loadAsync(modelUrl);
+    const gltf = await loadGltf(modelUrl);
     const scale = options.scale ?? board.scale;
     const visuals: THREE.Object3D[] = [];
     const colliders: RAPIER.Collider[] = [];
@@ -83,7 +83,8 @@ export class PhysicsPuzzle {
         placement.rotation?.z ?? 0
       );
 
-      placeOnBoardSurface(instance, placement.position.y ?? 0);
+      // Rest on the board surface (world y = 0 while the board is level).
+      restObjectBottomAtY(instance, placement.position.y ?? 0);
 
       board.visual.add(instance);
       visuals.push(instance);

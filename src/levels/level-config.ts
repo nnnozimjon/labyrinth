@@ -1,31 +1,51 @@
 import type { LevelManager } from "./LevelManager";
 import type { LevelContent } from "./level-types";
-import type { HoleLossTriggers } from "../entities/holes";
 
+/**
+ * Registers a level's visuals and colliders with the level manager, and shows its holes and
+ * gift only while it is the current level.
+ */
 export function registerLevelContent(
   levelManager: LevelManager,
   id: number,
-  content: LevelContent,
-  holes: HoleLossTriggers | null
+  content: LevelContent
 ) {
-  levelManager.registerLevelObject(id, content.board.visual);
-  levelManager.registerLevelObject(id, content.puzzle.visuals[0]);
-  levelManager.registerLevelBody(id, content.board.body);
+  const { board, puzzle, fans, holes, giftBox } = content;
 
-  for (const collider of content.board.getColliders()) {
+  levelManager.registerLevelObject(id, board.visual);
+  for (const visual of puzzle.visuals) {
+    levelManager.registerLevelObject(id, visual);
+  }
+  levelManager.registerLevelBody(id, board.body);
+
+  const colliders = [
+    ...board.getColliders(),
+    ...puzzle.getColliders(),
+    ...fans.flatMap((fan) => fan.getColliders()),
+  ];
+  for (const collider of colliders) {
     levelManager.registerLevelCollider(id, collider);
   }
-  for (const collider of content.puzzle.getColliders()) {
-    levelManager.registerLevelCollider(id, collider);
+
+  for (const helper of holes?.getDebugHelpers() ?? []) {
+    levelManager.registerDebugHelper(id, helper);
   }
-  for (const fan of content.fans) {
-    for (const collider of fan.getColliders()) {
-      levelManager.registerLevelCollider(id, collider);
-    }
-  }
-  if (holes) {
-    for (const helper of holes.getDebugHelpers()) {
+
+  if (giftBox) {
+    levelManager.registerLevelObject(id, giftBox.visual);
+    for (const helper of giftBox.getDebugHelpers()) {
       levelManager.registerDebugHelper(id, helper);
     }
   }
+
+  levelManager.setLevelHooks(id, {
+    onActivate: () => {
+      holes?.setActive(true);
+      giftBox?.setActive(true);
+    },
+    onDeactivate: () => {
+      holes?.setActive(false);
+      giftBox?.setActive(false);
+    },
+  });
 }

@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { gltfLoader } from "../../utils/gltf-loader";
+import { loadGltf } from "../../utils/gltf-loader";
+import { setObjectOpacity } from "../../utils/material-utils";
 import type RAPIER from "@dimforge/rapier3d-compat";
 import {
   applyCollisionEvents,
@@ -38,6 +39,11 @@ export type BoardAnchor = {
   readonly scale: number;
 };
 
+/** Board-aligned anchor that is never hidden or disabled (walls, gate, containment). */
+export type SharedBoardAnchor = BoardAnchor & {
+  setRotation(quaternion: THREE.Quaternion): void;
+};
+
 export class PhysicsBoard implements BoardAnchor {
   readonly visual: THREE.Group;
   readonly body: RAPIER.RigidBody;
@@ -72,7 +78,7 @@ export class PhysicsBoard implements BoardAnchor {
     modelUrl: string,
     options: PhysicsBoardOptions = {}
   ): Promise<PhysicsBoard> {
-    const gltf = await gltfLoader.loadAsync(modelUrl);
+    const gltf = await loadGltf(modelUrl);
     const model = gltf.scene.clone();
     prepareGltfMaterials(model);
 
@@ -147,7 +153,7 @@ export class PhysicsBoard implements BoardAnchor {
     world: RAPIER.World,
     parent: THREE.Object3D,
     reference: PhysicsBoard
-  ): BoardAnchor & { setRotation(quaternion: THREE.Quaternion): void } {
+  ): SharedBoardAnchor {
     const visual = new THREE.Group();
     visual.name = "board-shared";
     visual.position.copy(reference.visual.position);
@@ -198,18 +204,7 @@ export class PhysicsBoard implements BoardAnchor {
   }
 
   setOpacity(opacity: number) {
-    this.visual.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
-
-      const materials = Array.isArray(child.material)
-        ? child.material
-        : [child.material];
-      for (const material of materials) {
-        material.transparent = opacity < 1;
-        material.opacity = opacity;
-        material.needsUpdate = true;
-      }
-    });
+    setObjectOpacity(this.visual, opacity);
   }
 
   setRotation(quaternion: THREE.Quaternion) {

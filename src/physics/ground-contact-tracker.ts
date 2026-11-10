@@ -1,29 +1,38 @@
 import type RAPIER from "@dimforge/rapier3d-compat";
 
-/** Tracks whether the ball is currently colliding with the large static world ground. */
+/** Tracks whether the ball is actually touching the static world ground (the table). */
 export class GroundContactTracker {
-  private readonly groundColliderHandles: Set<number>;
+  private readonly groundHandles: Set<number>;
+  private readonly candidates: RAPIER.Collider[] = [];
   private touching = false;
 
-  constructor(colliders: readonly RAPIER.Collider[]) {
-    this.groundColliderHandles = new Set(colliders.map((collider) => collider.handle));
+  constructor(groundColliders: readonly RAPIER.Collider[]) {
+    this.groundHandles = new Set(groundColliders.map((collider) => collider.handle));
   }
 
   get isTouchingGround(): boolean {
     return this.touching;
   }
 
-  /** Re-read contacts from the physics world after each step (more reliable than events alone). */
-  syncFromWorld(world: RAPIER.World, ballColliderHandle: number) {
-    const ballCollider = world.getCollider(ballColliderHandle);
-    let touching = false;
-
-    world.contactPairsWith(ballCollider, (otherCollider) => {
-      if (this.groundColliderHandles.has(otherCollider.handle)) {
-        touching = true;
-      }
+  /**
+   * Re-reads contacts after a physics step. `contactPairsWith` also lists pairs whose bounding
+   * boxes merely overlap, so each candidate is confirmed by its contact manifold.
+   */
+  update(world: RAPIER.World, ballCollider: RAPIER.Collider) {
+    this.candidates.length = 0;
+    world.contactPairsWith(ballCollider, (other) => {
+      if (this.groundHandles.has(other.handle)) this.candidates.push(other);
     });
 
+    let touching = false;
+    for (const ground of this.candidates) {
+      world.contactPair(ballCollider, ground, (manifold) => {
+        if (manifold.numContacts() > 0) touching = true;
+      });
+      if (touching) break;
+    }
+
+    this.candidates.length = 0;
     this.touching = touching;
   }
 

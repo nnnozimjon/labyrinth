@@ -9,8 +9,46 @@ export const BOARD_SCALE = 10;
 /** Scale for the large static environment ground. */
 export const GROUND_SCALE = 10;
 
-/** Set to override the auto-calculated collider radius from the GLB bounding sphere. */
-export const BALL_COLLIDER_RADIUS: number | undefined = 0.5;
+// ---------------------------------------------------------------------------
+// Physics
+// ---------------------------------------------------------------------------
+
+export const GRAVITY_Y = -24.81;
+
+/**
+ * Physics always advances in steps of exactly this size, whatever the display refresh rate.
+ * Stepping Rapier with the raw frame time let a single slow frame carry the ball straight
+ * through the paper-thin board or the hollow wall meshes.
+ */
+export const PHYSICS_TIMESTEP = 1 / 120;
+
+/**
+ * Longest frame time fed to the simulation and animations. Longer frames (GC pause, shader
+ * compile, slow device) briefly slow the game down instead of teleporting the ball.
+ */
+export const MAX_FRAME_DELTA = 0.1;
+
+/** Ball collider radius; the ball model is scaled to exactly this size. */
+export const BALL_RADIUS = 0.3;
+export const BALL_RESTITUTION = 0.6;
+
+/**
+ * Invisible solid rim around the play area, in board-local units relative to the surface.
+ * Its inner faces sit flush behind the visible (hollow) walls. It reaches far above the
+ * 0.4-high walls so a hard flick cannot launch the ball out, and dips below the floor so a
+ * ball dropping into a hole next to a wall cannot slip out sideways underneath it.
+ */
+export const BOARD_CONTAINMENT = {
+  thickness: 0.6,
+  top: 2.5,
+  bottom: -0.45,
+} as const;
+
+/** Dropping through the floor within this distance of the gate opening's centre wins. */
+export const GOAL_TRIGGER_RADIUS = 1.5;
+
+/** Dropping through the floor within this distance of a loss hole's centre loses. */
+export const HOLE_TRIGGER_RADIUS = 0.5;
 
 /** When true, renders wireframe debug visuals for all physics colliders. */
 export const SHOW_COLLIDERS = false;

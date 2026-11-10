@@ -244,74 +244,6 @@ export function isDescendantOfNamedObject(
   return false;
 }
 
-export function getObjectTransformWrtParent(
-  object: THREE.Object3D,
-  parent: THREE.Object3D,
-  position = new THREE.Vector3(),
-  quaternion = new THREE.Quaternion()
-): { position: THREE.Vector3; quaternion: THREE.Quaternion } {
-  object.updateMatrixWorld(true);
-  parent.updateMatrixWorld(true);
-
-  const localMatrix = new THREE.Matrix4()
-    .copy(parent.matrixWorld)
-    .invert()
-    .multiply(object.matrixWorld);
-
-  const scale = new THREE.Vector3();
-  localMatrix.decompose(position, quaternion, scale);
-  return { position, quaternion };
-}
-
-export function syncColliderTransformWrtParent(
-  collider: RAPIER.Collider,
-  object: THREE.Object3D,
-  parent: THREE.Object3D
-) {
-  const { position, quaternion } = getObjectTransformWrtParent(object, parent);
-  collider.setTranslationWrtParent({
-    x: position.x,
-    y: position.y,
-    z: position.z,
-  });
-  collider.setRotationWrtParent({
-    x: quaternion.x,
-    y: quaternion.y,
-    z: quaternion.z,
-    w: quaternion.w,
-  });
-}
-
-export function extractMeshGeometryTrimesh(mesh: THREE.Mesh): {
-  vertices: Float32Array;
-  indices: Uint32Array;
-} {
-  const vertices: number[] = [];
-  const indices: number[] = [];
-
-  const geometry = mesh.geometry;
-  const position = geometry.attributes.position;
-
-  for (let i = 0; i < position.count; i++) {
-    vertices.push(position.getX(i), position.getY(i), position.getZ(i));
-  }
-
-  if (geometry.index) {
-    for (let i = 0; i < geometry.index.count; i++) {
-      indices.push(geometry.index.getX(i));
-    }
-  } else {
-    for (let i = 0; i < position.count; i++) {
-      indices.push(i);
-    }
-  }
-
-  return {
-    vertices: new Float32Array(vertices),
-    indices: Uint32Array.from(indices),
-  };
-}
-
 const MIN_COLLIDER_HALF_EXTENT = 0.01;
 
 /** Mesh-local trimesh with ancestor scale baked in (Rapier colliders cannot scale). */
@@ -418,42 +350,31 @@ export type RotatingBoardCollider = {
   localOffset?: THREE.Vector3;
 };
 
+const syncOffset = new THREE.Matrix4();
+const syncLocal = new THREE.Matrix4();
+const syncPosition = new THREE.Vector3();
+const syncQuaternion = new THREE.Quaternion();
+const syncScale = new THREE.Vector3();
+
+/**
+ * Moves a rotating part's collider to match its mesh, relative to the board body. Runs every
+ * physics step, so it only refreshes the two ancestor chains it needs and allocates nothing.
+ */
 export function syncRotatingBoardCollider(
   entry: RotatingBoardCollider,
   boardVisual: THREE.Object3D
 ) {
-  entry.mesh.updateMatrixWorld(true);
-  boardVisual.updateMatrixWorld(true);
+  boardVisual.updateWorldMatrix(true, false);
+  entry.mesh.updateWorldMatrix(true, false);
 
+  syncLocal.copy(boardVisual.matrixWorld).invert().multiply(entry.mesh.matrixWorld);
   if (entry.localOffset) {
-    const objectMatrix = entry.mesh.matrixWorld.clone().multiply(
-      new THREE.Matrix4().makeTranslation(entry.localOffset)
-    );
-    const localMatrix = new THREE.Matrix4()
-      .copy(boardVisual.matrixWorld)
-      .invert()
-      .multiply(objectMatrix);
-
-    const position = new THREE.Vector3();
-    const quaternion = new THREE.Quaternion();
-    const scale = new THREE.Vector3();
-    localMatrix.decompose(position, quaternion, scale);
-
-    entry.collider.setTranslationWrtParent({
-      x: position.x,
-      y: position.y,
-      z: position.z,
-    });
-    entry.collider.setRotationWrtParent({
-      x: quaternion.x,
-      y: quaternion.y,
-      z: quaternion.z,
-      w: quaternion.w,
-    });
-    return;
+    syncLocal.multiply(syncOffset.makeTranslation(entry.localOffset));
   }
+  syncLocal.decompose(syncPosition, syncQuaternion, syncScale);
 
-  syncColliderTransformWrtParent(entry.collider, entry.mesh, boardVisual);
+  entry.collider.setTranslationWrtParent(syncPosition);
+  entry.collider.setRotationWrtParent(syncQuaternion);
 }
 
 export function addRotatingPartBoardColliders(
@@ -540,9 +461,4 @@ export function restObjectBottomAtY(object: THREE.Object3D, surfaceY = 0) {
   const box = new THREE.Box3().setFromObject(object);
   object.position.y += surfaceY - box.min.y;
   object.updateMatrixWorld(true);
-}
-
-/** Places an object so its bottom rests on the board surface (world y = 0 at init). */
-export function placeOnBoardSurface(object: THREE.Object3D, yOffset = 0) {
-  restObjectBottomAtY(object, yOffset);
 }

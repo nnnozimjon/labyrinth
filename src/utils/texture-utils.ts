@@ -28,28 +28,46 @@ export type ModelTextureOptions = {
 };
 
 const textureLoader = new TextureLoader();
+const textureCache = new Map<string, Promise<THREE.Texture>>();
 
 type TextureLoadOptions = Omit<
   ModelTextureOptions,
   "textureUrl" | "color" | "roughness" | "metalness"
 >;
 
+/**
+ * Loads an image once per URL. Several models use the same texture with different tiling,
+ * so callers get clones: they share the decoded image (and its GPU upload) but keep their
+ * own UV settings.
+ */
+export function loadTexture(url: string): Promise<THREE.Texture> {
+  let pending = textureCache.get(url);
+  if (!pending) {
+    pending = textureLoader.loadAsync(url).catch((error: unknown) => {
+      textureCache.delete(url);
+      const failedUrl =
+        error instanceof Event && error.target instanceof HTMLImageElement
+          ? error.target.src
+          : url;
+      const message = `Failed to load texture: ${failedUrl}`;
+      console.error(message, error);
+      throw new Error(message, { cause: error });
+    });
+    textureCache.set(url, pending);
+  }
+  return pending;
+}
+
+/** Drops cached base textures once every model has its own clone. */
+export function clearTextureCache(): void {
+  textureCache.clear();
+}
+
 export async function loadModelTexture(
   url: string,
   options: TextureLoadOptions = {}
 ): Promise<THREE.Texture> {
-  let texture: THREE.Texture;
-  try {
-    texture = await textureLoader.loadAsync(url);
-  } catch (error) {
-    const failedUrl =
-      error instanceof Event && error.target instanceof HTMLImageElement
-        ? error.target.src
-        : url;
-    const message = `Failed to load texture: ${failedUrl}`;
-    console.error(message, error);
-    throw new Error(message, { cause: error });
-  }
+  const texture = (await loadTexture(url)).clone();
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.flipY = options.flipY ?? false;
   texture.wrapS = options.wrapS ?? THREE.RepeatWrapping;

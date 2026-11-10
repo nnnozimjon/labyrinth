@@ -1,4 +1,3 @@
-export { PhysicsHolesLevel2 } from "./PhysicsHoleLevel2";
-export { PhysicsHolesLevel3 } from "./PhysicsHoleLevel3";
-export { PhysicsGateHole } from "./PhysicsGateHole";
-export type { HoleLossTriggers, HolePosition } from "./holes-types";
+export { GateHole } from "./GateHole";
+export { LossHoles } from "./LossHoles";
+export type { HolePosition } from "./holes-types";

@@ -1,12 +1,12 @@
 import * as THREE from "three";
-import { gltfLoader } from "../../utils/gltf-loader";
+import { loadGltf } from "../../utils/gltf-loader";
 import type { PhysicsBoard } from "./PhysicsBoard";
-import type { PhysicsBall } from "../ball/PhysicsBall";
 import {
   centerModelAtPivot,
   prepareGltfMaterials,
 } from "../../physics/collider-utils";
 import { disposeObject3D } from "../../utils/dispose";
+import { setObjectOpacity } from "../../utils/material-utils";
 import { easeInCubic } from "../../levels/puzzle-animation";
 
 const DEFAULT_POSITION = new THREE.Vector3(0, 0, 0);
@@ -63,7 +63,7 @@ export class Level3GiftBox {
     modelUrl: string,
     options: Level3GiftBoxOptions = {}
   ): Promise<Level3GiftBox> {
-    const gltf = await gltfLoader.loadAsync(modelUrl);
+    const gltf = await loadGltf(modelUrl);
     const model = gltf.scene.clone();
     prepareGltfMaterials(model);
 
@@ -126,10 +126,6 @@ export class Level3GiftBox {
     return instance;
   }
 
-  get isCollected(): boolean {
-    return this.collected;
-  }
-
   get isRemoved(): boolean {
     return this.removed;
   }
@@ -142,10 +138,6 @@ export class Level3GiftBox {
     this.onCollectCallback = callback;
   }
 
-  setCollected(collected: boolean) {
-    this.collected = collected;
-  }
-
   /** Smoothly fades out and removes the gift from the scene. */
   fadeOut(duration = GIFT_FADE_DURATION, onRemoved?: () => void) {
     if (this.removed || this.dismissing) return;
@@ -155,19 +147,6 @@ export class Level3GiftBox {
     this.dismissDuration = duration;
     this.collected = true;
     this.onRemovedCallback = onRemoved ?? null;
-  }
-
-  private setOpacity(opacity: number) {
-    this.visual.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
-
-      const materials = Array.isArray(child.material) ? child.material : [child.material];
-      for (const material of materials) {
-        material.transparent = opacity < 1;
-        material.opacity = opacity;
-        material.needsUpdate = true;
-      }
-    });
   }
 
   private removeFromScene() {
@@ -196,7 +175,11 @@ export class Level3GiftBox {
     }
   }
 
-  update(delta: number, ball: PhysicsBall) {
+  /**
+   * Animates the gift. Pass the ball position while the ball is in play to detect pickup,
+   * or null to only animate.
+   */
+  update(delta: number, ballPosition: THREE.Vector3Like | null) {
     if (this.removed) return;
 
     if (this.dismissing) {
@@ -204,7 +187,7 @@ export class Level3GiftBox {
       const t = Math.min(this.dismissTime / this.dismissDuration, 1);
       const eased = easeInCubic(t);
 
-      this.setOpacity(1 - eased);
+      setObjectOpacity(this.visual, 1 - eased);
       this.scaleGroup.scale.setScalar(this.baseScale * (1 - eased * 0.2));
       this.wigglePivot.position.y = eased * 0.35;
 
@@ -223,12 +206,11 @@ export class Level3GiftBox {
       this.wigglePivot.position.y = Math.sin(t * WIGGLE_SPEED_BOB) * WIGGLE_BOB_Y;
     }
 
-    if (!this.active || this.collected) return;
+    if (!this.active || this.collected || !ballPosition) return;
 
     this.triggerMesh.updateWorldMatrix(true, false);
     this.triggerMesh.getWorldPosition(this.triggerCenterWorld);
 
-    const ballPosition = ball.body.translation();
     const dx = ballPosition.x - this.triggerCenterWorld.x;
     const dz = ballPosition.z - this.triggerCenterWorld.z;
     const distanceXZ = Math.sqrt(dx * dx + dz * dz);

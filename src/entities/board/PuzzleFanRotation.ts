@@ -38,16 +38,14 @@ export class PuzzleFanRotation {
     this.colliders = colliders;
   }
 
+  /** Makes the named part spin; returns null when the puzzle has no such part. */
   static attach(
     root: THREE.Object3D,
     physics: PuzzleFanPhysics,
     objectName = FAN_OBJECT_NAME
   ): PuzzleFanRotation | null {
     const mesh = findNamedObject(root, objectName);
-    if (!mesh) {
-      console.warn(`PuzzleFanRotation: "${objectName}" not found in puzzle model`);
-      return null;
-    }
+    if (!mesh) return null;
 
     const pivot = reparentAtVisualCenter(mesh);
     const colliders = addRotatingPartBoardColliders(
@@ -81,6 +79,7 @@ export class PuzzleFanRotation {
     }
   }
 
+  /** Spins the part and moves its colliders along; call once per physics step. */
   update(delta: number, speed = FAN_ROTATION_SPEED): void {
     this.pivot.rotateY(speed * delta);
 

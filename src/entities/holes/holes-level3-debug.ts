@@ -1,6 +1,7 @@
 import GUI from "lil-gui";
-import type { PhysicsHolesLevel3 } from "./PhysicsHoleLevel3";
+import type { LossHoles } from "./LossHoles";
 import type { HolePosition } from "./holes-types";
+import { LEVEL_HOLE_POSITIONS } from "../../levels/hole-positions";
 
 const DECIMALS = 2;
 
@@ -9,19 +10,20 @@ function round(value: number): number {
   return Math.round(value * factor) / factor;
 }
 
-export function formatHolePositionsCode(positions: HolePosition[]): string {
+/** Formats positions as the level-3 entry of LEVEL_HOLE_POSITIONS (src/levels/hole-positions.ts). */
+export function formatHolePositionsCode(positions: readonly HolePosition[]): string {
   if (positions.length === 0) {
-    return "const DEFAULT_HOLE_POSITIONS: HolePosition[] = [];";
+    return "3: [],";
   }
 
   const lines = positions.map(
-    (hole) => `  { x: ${round(hole.x)}, z: ${round(hole.z)} },`
+    (hole) => `    { x: ${round(hole.x)}, z: ${round(hole.z)} },`
   );
 
-  return `const DEFAULT_HOLE_POSITIONS: HolePosition[] = [\n${lines.join("\n")}\n];`;
+  return `3: [\n${lines.join("\n")}\n  ],`;
 }
 
-export function logHolePositions(positions: HolePosition[]): void {
+export function logHolePositions(positions: readonly HolePosition[]): void {
   console.log("=== Level 3 Hole Positions ===");
   for (let i = 0; i < positions.length; i++) {
     const hole = positions[i];
@@ -32,7 +34,7 @@ export function logHolePositions(positions: HolePosition[]): void {
 }
 
 export type HolesLevel3DebugOptions = {
-  holes: PhysicsHolesLevel3;
+  holes: LossHoles;
   enabled: boolean;
 };
 
@@ -47,7 +49,7 @@ export function createHolesLevel3DebugUI(options: HolesLevel3DebugOptions) {
   }
 
   const { holes } = options;
-  const holeParams: HoleParam[] = holes.getPositions().map((p) => ({ x: p.x, z: p.z }));
+  const holeParams: HoleParam[] = holes.positions.map((p) => ({ x: p.x, z: p.z }));
   const holeFolders: GUI[] = [];
 
   const gui = new GUI({ title: "Level 3 Holes" });
@@ -57,7 +59,7 @@ export function createHolesLevel3DebugUI(options: HolesLevel3DebugOptions) {
   holesFolder.open();
 
   const syncParamsFromHoles = () => {
-    const positions = holes.getPositions();
+    const positions = holes.positions;
     holeParams.length = 0;
     for (const pos of positions) {
       holeParams.push({ x: pos.x, z: pos.z });
@@ -110,30 +112,23 @@ export function createHolesLevel3DebugUI(options: HolesLevel3DebugOptions) {
       console.log("[Level 3 holes] Removed last hole");
     },
     logPositions() {
-      logHolePositions(holes.getPositions());
+      logHolePositions(holes.positions);
     },
     async copyPositions() {
-      const code = formatHolePositionsCode(holes.getPositions());
+      const code = formatHolePositionsCode(holes.positions);
       try {
         await navigator.clipboard.writeText(code);
-        console.log("[Level 3 holes] DEFAULT_HOLE_POSITIONS copied to clipboard.");
+        console.log("[Level 3 holes] LEVEL_HOLE_POSITIONS[3] copied to clipboard.");
       } catch {
         console.log("[Level 3 holes] Clipboard unavailable. Copy-paste code:");
         console.log(code);
       }
     },
     seedFromLevel2() {
-      const level2Positions: HolePosition[] = [
-        { x: -2.21, z: 2.42 },
-        { x: 2.08, z: -0.14 },
-        { x: -2.21, z: -0.15 },
-        { x: -2.21, z: -2.49 },
-        { x: 2.08, z: -2.49 },
-      ];
-      while (holes.getTriggerCount() > 0) {
-        holes.removeTrigger(holes.getTriggerCount() - 1);
+      while (holes.triggerCount > 0) {
+        holes.removeTrigger(holes.triggerCount - 1);
       }
-      for (const pos of level2Positions) {
+      for (const pos of LEVEL_HOLE_POSITIONS[2] ?? []) {
         holes.addTrigger(pos.x, pos.z);
       }
       syncParamsFromHoles();
@@ -146,7 +141,7 @@ export function createHolesLevel3DebugUI(options: HolesLevel3DebugOptions) {
   gui.add(actions, "removeLastHole").name("Remove last hole");
   gui.add(actions, "seedFromLevel2").name("Seed from level 2");
   gui.add(actions, "logPositions").name("Log positions");
-  gui.add(actions, "copyPositions").name("Copy DEFAULT_HOLE_POSITIONS");
+  gui.add(actions, "copyPositions").name("Copy LEVEL_HOLE_POSITIONS[3]");
 
   if (holeParams.length === 0) {
     actions.addHole();
@@ -154,7 +149,7 @@ export function createHolesLevel3DebugUI(options: HolesLevel3DebugOptions) {
     rebuildHoleFolders();
   }
 
-  console.log("[Level 3 holes] Debug panel ready — tweak x/z, then copy DEFAULT_HOLE_POSITIONS.");
+  console.log("[Level 3 holes] Debug panel ready — tweak x/z, then copy LEVEL_HOLE_POSITIONS[3].");
 
   return {
     gui,

@@ -16,14 +16,18 @@ import sandWatchModelUrl from "../sand-watch.glb?url";
 import dicesModelUrl from "../dices.glb?url";
 import vfxGateHoleModelUrl from "../gate-hole-vfx.glb?url";
 
-/** Draco-compressed glTF assets served from `public/`. */
+/**
+ * Draco-compressed models served from `public/`. Kept as single `.glb` files: download managers
+ * (IDM and the like) intercept requests for the `.bin` buffers of a `.gltf` + `.bin` pair. Pack
+ * new exports with `node scripts/pack-gltf-to-glb.mjs`.
+ */
 const gltfModels = {
-  ball: "/ball.gltf",
-  stairs: "/board-stairs.gltf",
-  lamp: "/lamp.gltf",
-  cupPlate: "/cup-plate.gltf",
-  levelCalendar: "/level-calendar.gltf",
-  giftBox: "/gift-box.gltf",
+  ball: "/ball.glb",
+  stairs: "/board-stairs.glb",
+  lamp: "/lamp.glb",
+  cupPlate: "/cup-plate.glb",
+  levelCalendar: "/level-calendar.glb",
+  giftBox: "/gift-box.glb",
 } as const;
 
 export const models = {

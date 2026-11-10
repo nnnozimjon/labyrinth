@@ -26,9 +26,7 @@ export function createBallSpawnLevel3DebugUI(options: BallSpawnLevel3DebugOption
   const { ball, spawn } = options;
 
   const applySpawn = () => {
-    ball.setStartPosition(spawn);
-    ball.reset();
-    ball.visual.visible = true;
+    ball.respawn(spawn);
   };
 
   const gui = new GUI({ title: "Level 3 Ball Spawn" });

@@ -7,7 +7,7 @@ import {
 import { SHOW_DEBUG_HELPERS } from "../utils/constants";
 
 /** `userData` key used to tag objects with their level number. */
-export const LEVEL_USER_DATA_KEY = "level";
+const LEVEL_USER_DATA_KEY = "level";
 
 export type LevelConfig = {
   id: number;
@@ -27,29 +27,8 @@ export type LevelVisualState = {
   physics: boolean;
 };
 
-/** Read level number from `userData.level` or a `level-N` object / group name. */
-export function getObjectLevel(object: THREE.Object3D): number | null {
-  let current: THREE.Object3D | null = object;
-
-  while (current) {
-    const tagged = current.userData[LEVEL_USER_DATA_KEY];
-    if (typeof tagged === "number") {
-      return tagged;
-    }
-
-    const match = /^level-(\d+)$/.exec(current.name);
-    if (match) {
-      return Number.parseInt(match[1], 10);
-    }
-
-    current = current.parent;
-  }
-
-  return null;
-}
-
 /** Tag an object and its descendants with a level number. */
-export function tagObjectLevel(object: THREE.Object3D, level: number): void {
+function tagObjectLevel(object: THREE.Object3D, level: number): void {
   object.userData[LEVEL_USER_DATA_KEY] = level;
   object.traverse((child) => {
     child.userData[LEVEL_USER_DATA_KEY] = level;
@@ -210,17 +189,6 @@ export class LevelManager {
   /** Fine-grained control used during intro / outro transitions. */
   setLevelState(levelId: number, state: LevelVisualState): void {
     this.applyLevelState(levelId, state);
-  }
-
-  applyLevelVisibility(activeLevel: number): void {
-    for (const level of this.levels.values()) {
-      const isActive = level.id === activeLevel;
-      level.group.visible = isActive;
-
-      for (const helper of level.debugHelpers) {
-        helper.visible = isActive && SHOW_DEBUG_HELPERS;
-      }
-    }
   }
 
   private applyLevelState(levelId: number, state: LevelVisualState): void {

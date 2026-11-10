@@ -3,16 +3,17 @@ import type { PhysicsBoard } from "../entities/board/PhysicsBoard";
 import type { PhysicsPuzzle } from "../entities/board/PhysicsPuzzle";
 import type { PuzzleFanRotation } from "../entities/board/PuzzleFanRotation";
 import type { Level3GiftBox } from "../entities/board/Level3GiftBox";
-import type { HoleLossTriggers } from "../entities/holes";
+import type { LossHoles } from "../entities/holes";
 
+/** Everything that belongs to one level and is swapped out when the level changes. */
 export type LevelContent = {
-  board: PhysicsBoard;
-  puzzle: PhysicsPuzzle;
-  holes: HoleLossTriggers | null;
-  fans: PuzzleFanRotation[];
-  giftBox?: Level3GiftBox | null;
+  readonly board: PhysicsBoard;
+  readonly puzzle: PhysicsPuzzle;
+  readonly fans: readonly PuzzleFanRotation[];
+  /** Loss holes, or null on levels without them. */
+  readonly holes: LossHoles | null;
+  /** Collectible gift, or null on levels without one. */
+  readonly giftBox: Level3GiftBox | null;
 };
-
-export type LevelTransitionPhase = "none" | "waiting" | "level_out" | "level_in";
 
 export type PuzzleVisuals = THREE.Object3D[];

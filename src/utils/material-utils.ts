@@ -242,44 +242,31 @@ function applyOverrideToMaterial(
   return mat;
 }
 
-export type MeshCache = Map<string, THREE.Mesh[]>;
-
-// Fix: optional mesh cache to avoid re-traversing the full tree on repeated calls
-export function buildMeshCache(root: THREE.Object3D): MeshCache {
-  const cache: MeshCache = new Map();
+/**
+ * Fades every material under `root`. Opacity is just a uniform, but toggling `transparent`
+ * changes the compiled shader, so materials are only flagged for recompilation when it flips
+ * (not on every frame of a fade).
+ */
+export function setObjectOpacity(root: THREE.Object3D, opacity: number): void {
+  const transparent = opacity < 1;
   root.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return;
+
     const materials = Array.isArray(child.material) ? child.material : [child.material];
-    for (const mat of materials) {
-      if (!cache.has(mat.name)) cache.set(mat.name, []);
-      cache.get(mat.name)!.push(child);
+    for (const material of materials) {
+      material.opacity = opacity;
+      if (material.transparent !== transparent) {
+        material.transparent = transparent;
+        material.needsUpdate = true;
+      }
     }
   });
-  return cache;
 }
 
 export function applyMaterialOverrides(
   root: THREE.Object3D,
-  overrides: MaterialOverrideMap,
-  cache?: MeshCache
+  overrides: MaterialOverrideMap
 ): void {
-  if (cache) {
-    for (const [matName, override] of Object.entries(overrides)) {
-      const meshes = cache.get(matName);
-      if (!meshes) continue;
-      for (const mesh of meshes) {
-        if (Array.isArray(mesh.material)) {
-          mesh.material = mesh.material.map((m) =>
-            m.name === matName ? applyOverrideToMaterial(m, override) : m
-          );
-        } else {
-          mesh.material = applyOverrideToMaterial(mesh.material, override);
-        }
-      }
-    }
-    return;
-  }
-
   root.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return;
 

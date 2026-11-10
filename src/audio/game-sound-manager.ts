@@ -1,5 +1,4 @@
-import ballHitUrl from "../ball-hit.ogg";
-import lossUrl from "../loss.ogg";
+import { ballHit, loss } from "virtual:game-sounds";
 
 const HIT_DEBOUNCE_MS = 1000;
 const HIT_VOLUME = 0.65;
@@ -14,8 +13,8 @@ export class GameSoundManager {
 
   async preload(): Promise<void> {
     const [hitBuffer, lossBuffer] = await Promise.all([
-      this.loadBuffer(ballHitUrl),
-      this.loadBuffer(lossUrl),
+      this.loadBuffer(ballHit),
+      this.loadBuffer(loss),
     ]);
     this.hitBuffer = hitBuffer;
     this.lossBuffer = lossBuffer;
@@ -58,6 +57,7 @@ export class GameSoundManager {
     return this.context;
   }
 
+  /** `url` is a `data:` URL (see vite.config.ts), so this reads it without a network request. */
   private async loadBuffer(url: string): Promise<AudioBuffer> {
     const context = this.getOrCreateContext();
     const response = await fetch(url);

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { gltfLoader } from "../../utils/gltf-loader";
+import { loadGltf } from "../../utils/gltf-loader";
 import type RAPIER from "@dimforge/rapier3d-compat";
 import type { PhysicsBoard } from "./PhysicsBoard";
 import {
@@ -87,8 +87,8 @@ export class PhysicsStaticEnvironment {
     options: StaticEnvironmentOptions = {},
     board?: PhysicsBoard
   ): Promise<PhysicsStaticEnvironment> {
-    const gltf = await gltfLoader.loadAsync(modelUrl);
-    const model = gltf.scene;
+    const gltf = await loadGltf(modelUrl);
+    const model = gltf.scene.clone();
     prepareGltfMaterials(model);
 
     if (options.materialOverrides) {

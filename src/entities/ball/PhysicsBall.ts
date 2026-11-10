@@ -1,58 +1,58 @@
 import * as THREE from "three";
-import { gltfLoader } from "../../utils/gltf-loader";
 import RAPIER from "@dimforge/rapier3d-compat";
+import { loadGltf } from "../../utils/gltf-loader";
 import { applyCollisionEvents, prepareGltfMaterials } from "../../physics/collider-utils";
+import { BALL_RADIUS, BALL_RESTITUTION } from "../../utils/constants";
 
 export type PhysicsBallOptions = {
-  /** Override the auto-calculated sphere collider radius. */
-  colliderRadius?: number;
+  /** Collider radius; the model is scaled to match. Defaults to BALL_RADIUS. */
+  radius?: number;
   restitution?: number;
-  startPosition?: THREE.Vector3;
+  spawn?: THREE.Vector3Like;
 };
 
 type RapierModule = typeof RAPIER;
 
-function centerModelAndGetRadius(model: THREE.Object3D): number {
-  model.updateMatrixWorld(true);
+const ZERO = { x: 0, y: 0, z: 0 };
+const IDENTITY = { x: 0, y: 0, z: 0, w: 1 };
 
-  const box = new THREE.Box3().setFromObject(model);
-  const center = box.getCenter(new THREE.Vector3());
+/** Scales the model so its widest extent equals `radius`, then centres it on its origin. */
+function fitModelToRadius(model: THREE.Object3D, radius: number) {
+  const size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
+  const currentRadius = Math.max(size.x, size.y, size.z) / 2;
+  if (currentRadius > 0) {
+    model.scale.multiplyScalar(radius / currentRadius);
+  }
+  const center = new THREE.Box3().setFromObject(model).getCenter(new THREE.Vector3());
   model.position.sub(center);
-
-  const centeredBox = new THREE.Box3().setFromObject(model);
-  const boundingSphere = new THREE.Sphere();
-  centeredBox.getBoundingSphere(boundingSphere);
-
-  return boundingSphere.radius;
-}
-
-function scaleModelToRadius(model: THREE.Object3D, currentRadius: number, targetRadius: number) {
-  if (currentRadius <= 0) return;
-  const scale = targetRadius / currentRadius;
-  model.scale.multiplyScalar(scale);
 }
 
 export class PhysicsBall {
   readonly visual: THREE.Group;
   readonly body: RAPIER.RigidBody;
-  readonly colliderHandle: number;
-  readonly colliderRadius: number;
-  private readonly startPosition: THREE.Vector3;
+  readonly collider: RAPIER.Collider;
+  readonly radius: number;
+  private readonly spawn = new THREE.Vector3();
+  private frozen = false;
 
-  autoResetEnabled = true;
+  // Poses after the last two physics steps; the visual is drawn between them.
+  private readonly previousPosition = new THREE.Vector3();
+  private readonly currentPosition = new THREE.Vector3();
+  private readonly previousRotation = new THREE.Quaternion();
+  private readonly currentRotation = new THREE.Quaternion();
 
   private constructor(
     visual: THREE.Group,
     body: RAPIER.RigidBody,
-    colliderHandle: number,
-    colliderRadius: number,
-    startPosition: THREE.Vector3
+    collider: RAPIER.Collider,
+    radius: number,
+    spawn: THREE.Vector3Like
   ) {
     this.visual = visual;
     this.body = body;
-    this.colliderHandle = colliderHandle;
-    this.colliderRadius = colliderRadius;
-    this.startPosition = startPosition.clone();
+    this.collider = collider;
+    this.radius = radius;
+    this.spawn.copy(spawn);
   }
 
   static async create(
@@ -62,121 +62,117 @@ export class PhysicsBall {
     modelUrl: string,
     options: PhysicsBallOptions = {}
   ): Promise<PhysicsBall> {
-    const gltf = await gltfLoader.loadAsync(modelUrl);
+    const gltf = await loadGltf(modelUrl);
     const model = gltf.scene.clone();
     prepareGltfMaterials(model);
 
-    const measuredRadius = centerModelAndGetRadius(model);
-    const colliderRadius = options.colliderRadius ?? measuredRadius;
-
-    if (options.colliderRadius !== undefined) {
-      scaleModelToRadius(model, measuredRadius, colliderRadius);
-    }
+    const radius = options.radius ?? BALL_RADIUS;
+    fitModelToRadius(model, radius);
 
     const visual = new THREE.Group();
+    visual.name = "ball";
     visual.add(model);
+    scene.add(visual);
 
-    const startPosition = options.startPosition ?? new THREE.Vector3(0, 0, 0);
-    const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
-      .setTranslation(startPosition.x, startPosition.y, startPosition.z);
-    const body = world.createRigidBody(bodyDesc);
-
+    const spawn = options.spawn ?? { x: 0, y: radius, z: 0 };
+    // CCD keeps a fast ball from skipping through thin colliders between two steps.
+    const body = world.createRigidBody(
+      RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(spawn.x, spawn.y, spawn.z)
+        .setCcdEnabled(true)
+    );
     const collider = world.createCollider(
       applyCollisionEvents(
         RAPIER,
-        RAPIER.ColliderDesc.ball(0.3).setRestitution(options.restitution ?? 0.6)
+        RAPIER.ColliderDesc.ball(radius).setRestitution(
+          options.restitution ?? BALL_RESTITUTION
+        )
       ),
       body
     );
 
-    visual.position.copy(startPosition);
-    scene.add(visual);
-
-    const ball = new PhysicsBall(visual, body, collider.handle, 0.3, startPosition);
-    ball.ensureSpawnIntegrity(scene);
+    const ball = new PhysicsBall(visual, body, collider, radius, spawn);
+    ball.snapPose();
     return ball;
   }
 
-  reset() {
-    this.body.setTranslation(
-      { x: this.startPosition.x, y: this.startPosition.y, z: this.startPosition.z },
-      true
-    );
-    this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
-    this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
-    this.body.wakeUp();
-
-    this.visual.position.copy(this.startPosition);
-    this.visual.quaternion.identity();
+  get isFrozen(): boolean {
+    return this.frozen;
   }
 
-  /** Ensures the ball is in the scene, visible, and at its spawn position. */
-  ensureSpawnIntegrity(scene: THREE.Scene) {
-    if (this.visual.parent !== scene) {
-      this.visual.parent?.remove(this.visual);
-      scene.add(this.visual);
-    }
+  /** Puts the ball back in play: at its spawn point (optionally a new one), at rest, visible. */
+  respawn(spawn?: THREE.Vector3Like) {
+    if (spawn) this.spawn.copy(spawn);
+    this.unfreeze();
+
+    this.body.setTranslation(this.spawn, true);
+    this.body.setRotation(IDENTITY, true);
+    this.body.setLinvel(ZERO, true);
+    this.body.setAngvel(ZERO, true);
 
     this.visual.visible = true;
-
-    const position = this.body.translation();
-    const drift =
-      Math.abs(position.x - this.startPosition.x) +
-      Math.abs(position.y - this.startPosition.y) +
-      Math.abs(position.z - this.startPosition.z);
-    const belowSpawn = position.y < this.startPosition.y - 0.05;
-
-    if (drift > 0.08 || belowSpawn) {
-      this.reset();
-    }
+    this.snapPose();
   }
 
-  setStartPosition(position: THREE.Vector3 | { x: number; y: number; z: number }) {
-    this.startPosition.set(position.x, position.y, position.z);
-  }
-
-  /** Stops the ball in place — used during gift pickup cinematic. */
+  /** Pins the ball where it is (kinematic) while overlays, cinematics or transitions run. */
   freeze() {
-    const position = this.body.translation();
-    const rotation = this.body.rotation();
+    if (this.frozen) return;
+    this.frozen = true;
 
-    this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
-    this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    this.body.setLinvel(ZERO, true);
+    this.body.setAngvel(ZERO, true);
     this.body.setBodyType(RAPIER.RigidBodyType.KinematicPositionBased, true);
-    this.body.setNextKinematicTranslation(position);
-    this.body.setNextKinematicRotation(rotation);
-
-    this.visual.position.set(position.x, position.y, position.z);
-    this.visual.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+    this.body.setNextKinematicTranslation(this.body.translation());
+    this.body.setNextKinematicRotation(this.body.rotation());
   }
 
   unfreeze() {
+    if (!this.frozen) return;
+    this.frozen = false;
+
     this.body.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
     this.body.wakeUp();
   }
 
-  /** Applies an impulse along a normalized direction (optionally with upward lift). */
-  applyImpulse(direction: THREE.Vector3, strength: number, lift = 0) {
-    const impulse = {
-      x: direction.x * strength,
-      y: direction.y * strength + lift,
-      z: direction.z * strength,
-    };
-
-    this.body.applyImpulse(impulse, true);
-    this.body.wakeUp();
+  setVisible(visible: boolean) {
+    this.visual.visible = visible;
   }
 
-  syncFromPhysics(fallThreshold = -5) {
-    const position = this.body.translation();
+  /** False if the simulation produced non-finite values (the ball would vanish for good). */
+  hasValidState(): boolean {
+    const p = this.body.translation();
+    const v = this.body.linvel();
+    return Number.isFinite(p.x + p.y + p.z + v.x + v.y + v.z);
+  }
 
-    if (position.y < fallThreshold) {
-      if (this.autoResetEnabled) this.reset();
-      return;
-    }
+  /** Records the rigid-body pose; call after every physics step. */
+  capturePose() {
+    this.previousPosition.copy(this.currentPosition);
+    this.previousRotation.copy(this.currentRotation);
+    this.readBodyPose();
+  }
 
-    const rotation = this.body.rotation();
-    this.visual.position.set(position.x, position.y, position.z);
-    this.visual.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+  /**
+   * Places the visual `alpha` of the way from the previous to the latest physics pose, so
+   * motion stays smooth when the display rate is not a multiple of the physics rate.
+   */
+  syncVisual(alpha = 1) {
+    this.visual.position.lerpVectors(this.previousPosition, this.currentPosition, alpha);
+    this.visual.quaternion.slerpQuaternions(this.previousRotation, this.currentRotation, alpha);
+  }
+
+  /** Jumps the visual to the body without interpolating (after a teleport). */
+  private snapPose() {
+    this.readBodyPose();
+    this.previousPosition.copy(this.currentPosition);
+    this.previousRotation.copy(this.currentRotation);
+    this.syncVisual();
+  }
+
+  private readBodyPose() {
+    const p = this.body.translation();
+    const q = this.body.rotation();
+    this.currentPosition.set(p.x, p.y, p.z);
+    this.currentRotation.set(q.x, q.y, q.z, q.w);
   }
 }
